@@ -1,0 +1,28 @@
+# Trello Test Configuration - EXAMPLE FILE
+# Copy this file to config.properties and configure your settings
+# OR use environment variables (recommended for credentials)
+
+# Trello Application URL
+trello.url=https://trello.com/login
+
+# Test Account Credentials
+# OPTION 1 (Recommended): Set as environment variables
+#   Windows: TRELLO_EMAIL and TRELLO_PASSWORD
+#   These will be automatically read by the framework
+#
+# OPTION 2: Set directly in config.properties (NOT recommended for git)
+#   Uncomment and fill in your credentials below
+# trello.email=your_email@example.com
+# trello.password=your_password
+
+# Browser Configuration
+browser=chrome
+headless=false
+
+# Timeout Configuration (in seconds)
+implicit.wait=10
+explicit.wait=15
+page.load.timeout=30
+
+# Test Environment
+environment=test

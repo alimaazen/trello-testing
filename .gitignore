@@ -1,0 +1,40 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test Results
+test-output/
+screenshots/
+reports/
+extent-reports/
+
+# Logs
+*.log
+
+# Credentials - Important!
+# Keep config.properties out of git to prevent accidental credential commits
+# Use config.properties.example as a template instead
+src/test/resources/config.properties
