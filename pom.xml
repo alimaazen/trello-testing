@@ -44,26 +44,6 @@
             <version>${webdrivermanager.version}</version>
         </dependency>
 
-        <!-- Apache Commons Configuration for config file handling -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-configuration2</artifactId>
-            <version>2.9.0</version>
-        </dependency>
-
-        <!-- Commons BeanUtils (required by commons-configuration2) -->
-        <dependency>
-            <groupId>commons-beanutils</groupId>
-            <artifactId>commons-beanutils</artifactId>
-            <version>1.9.4</version>
-        </dependency>
-
-        <!-- ExtentReports for better reporting (optional) -->
-        <dependency>
-            <groupId>com.aventstack</groupId>
-            <artifactId>extentreports</artifactId>
-            <version>5.1.1</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -80,15 +60,12 @@
             </plugin>
 
             <!-- Maven Surefire Plugin for TestNG execution -->
+            <!-- No suiteXmlFiles: Surefire auto-discovers *Tests classes, so -->
+            <!-- `mvn test -Dtest=SomeTests` and IntelliJ gutter runs behave the same. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.2</version>
-                <configuration>
-                    <suiteXmlFiles>
-                        <suiteXmlFile>testng.xml</suiteXmlFile>
-                    </suiteXmlFiles>
-                </configuration>
             </plugin>
         </plugins>
     </build>
