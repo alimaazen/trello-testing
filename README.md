@@ -140,7 +140,7 @@ Failed tests automatically save a screenshot to `test-output/screenshots/` (path
 1. Test class names must end in `Tests` (e.g. `CardTests`, `BoardTests`) - this is what Maven auto-discovery matches.
 2. Never hardcode credentials - use environment variables or `config.properties` (gitignored).
 3. Locators live in page objects, never in test methods. If a locator is missing, add a page object method.
-4. Branch from `main`, submit your work as a pull request. Do not create parallel repositories or zip files.
+4. Branch from `master`, submit your work as a pull request. Do not create parallel repositories or zip files.
 
 ## Configuration
 
@@ -254,7 +254,7 @@ Guidelines:
 ## Contributing
 
 1. Set up your test account and environment variables (see Quick Start).
-2. Branch from `main`: `git checkout -b feature/board-tests`.
+2. Branch from `master`: `git checkout -b feature/board-tests`.
 3. Write tests following the existing patterns (extend `BaseTest`, name the class `*Tests`).
 4. Run `mvn clean test` before pushing.
 5. Open a pull request - do not push branches with unrelated history or share code as zip files.
