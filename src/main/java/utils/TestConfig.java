@@ -1,103 +1,100 @@
 package utils;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * TestConfig class handles reading configuration from both:
+ * TestConfig reads configuration from two sources, in priority order:
  * 1. Environment variables (for sensitive data like credentials)
  * 2. config.properties file (for non-sensitive configuration)
- * 
- * Priority: Environment variables override config.properties values
+ *
+ * Environment variables override config.properties values.
+ * Key mapping: "trello.email" -> environment variable "TRELLO_EMAIL".
  */
 public class TestConfig {
-    
-    private Properties properties;
+
     private static final String CONFIG_FILE_PATH = "src/test/resources/config.properties";
-    
+
+    private final Properties properties;
+
     public TestConfig() {
         properties = new Properties();
         loadProperties();
     }
-    
-    /**
-     * Load properties from config file
-     */
+
     private void loadProperties() {
-        try {
-            FileInputStream fis = new FileInputStream(CONFIG_FILE_PATH);
-            properties.load(fis);
-            fis.close();
+        File configFile = new File(CONFIG_FILE_PATH);
+        if (!configFile.exists()) {
+            // Not an error: the setup may rely on environment variables only.
+            System.out.println("config.properties not found at " + CONFIG_FILE_PATH
+                    + " - using environment variables only.");
+            return;
+        }
+        try (InputStream in = new FileInputStream(configFile)) {
+            properties.load(in);
         } catch (IOException e) {
-            System.err.println("Error loading config.properties file: " + e.getMessage());
-            System.err.println("Please ensure config.properties exists at: " + CONFIG_FILE_PATH);
+            throw new IllegalStateException("Could not read config file: " + CONFIG_FILE_PATH, e);
         }
     }
-    
+
     /**
-     * Get property value by key
-     * First checks environment variables, then falls back to properties file
-     * 
+     * Get a required property. Checks environment variables first, then config.properties.
+     *
      * @param key Property key
      * @return Property value
+     * @throws IllegalStateException if the key is not configured anywhere (fail fast,
+     *                               instead of a cryptic NullPointerException later)
      */
     public String getProperty(String key) {
-        // First try to get from environment variable
-        String envValue = getEnvironmentVariable(key);
-        if (envValue != null && !envValue.isEmpty()) {
-            return envValue;
+        String value = lookup(key);
+        if (value == null || value.isEmpty()) {
+            throw new IllegalStateException(
+                    "Missing configuration for '" + key + "'. Set the environment variable "
+                            + toEnvKey(key) + " or add '" + key + "' to " + CONFIG_FILE_PATH
+                            + " (copy config.properties.example as a starting point).");
         }
-        
-        // Fall back to properties file
-        return properties.getProperty(key);
+        return value;
     }
-    
+
     /**
-     * Get property value with default fallback
-     * 
-     * @param key Property key
-     * @param defaultValue Default value if key not found
-     * @return Property value or default value
+     * Get an optional property with a default fallback.
+     *
+     * @param key          Property key
+     * @param defaultValue Value returned when the key is not configured anywhere
+     * @return Property value or the default
      */
     public String getProperty(String key, String defaultValue) {
-        // First try to get from environment variable
-        String envValue = getEnvironmentVariable(key);
-        if (envValue != null && !envValue.isEmpty()) {
-            return envValue;
-        }
-        
-        // Fall back to properties file or default
-        return properties.getProperty(key, defaultValue);
+        String value = lookup(key);
+        return (value == null || value.isEmpty()) ? defaultValue : value;
     }
-    
+
     /**
-     * Get environment variable by key
-     * Converts property key format to environment variable format
-     * Example: "trello.email" -> "TRELLO_EMAIL"
-     * 
-     * @param key Property key
-     * @return Environment variable value or null
-     */
-    private String getEnvironmentVariable(String key) {
-        // Convert property key to environment variable format
-        // trello.email -> TRELLO_EMAIL
-        String envKey = key.replace(".", "_").toUpperCase();
-        return System.getenv(envKey);
-    }
-    
-    /**
-     * Check if credentials are configured
-     * 
+     * Check whether usable test credentials are configured (env vars or config file,
+     * ignoring placeholder values like "your_email@example.com").
+     *
      * @return true if both email and password are available
      */
     public boolean hasCredentials() {
-        String email = getProperty("trello.email");
-        String password = getProperty("trello.password");
-        
-        return email != null && !email.isEmpty() && 
-               !email.contains("your_") && // Check if placeholder
-               password != null && !password.isEmpty() &&
-               !password.contains("your_"); // Check if placeholder
+        return isProvided("trello.email") && isProvided("trello.password");
+    }
+
+    private String lookup(String key) {
+        String envValue = System.getenv(toEnvKey(key));
+        if (envValue != null && !envValue.isEmpty()) {
+            return envValue;
+        }
+        return properties.getProperty(key);
+    }
+
+    private boolean isProvided(String key) {
+        String value = lookup(key);
+        return value != null && !value.isEmpty() && !value.contains("your_");
+    }
+
+    static String toEnvKey(String key) {
+        return key.replace('.', '_').toUpperCase();
     }
 }

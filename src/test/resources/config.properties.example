@@ -7,8 +7,8 @@ trello.url=https://trello.com/login
 
 # Test Account Credentials
 # OPTION 1 (Recommended): Set as environment variables
-#   Windows: TRELLO_EMAIL and TRELLO_PASSWORD
-#   These will be automatically read by the framework
+#   TRELLO_EMAIL and TRELLO_PASSWORD (use setup-env.bat)
+#   These are read automatically by the framework.
 #
 # OPTION 2: Set directly in config.properties (NOT recommended for git)
 #   Uncomment and fill in your credentials below
@@ -16,13 +16,7 @@ trello.url=https://trello.com/login
 # trello.password=your_password
 
 # Browser Configuration
-browser=chrome
+# browser: firefox (default) | chrome | edge
+# headless: true | false (default false)
+browser=firefox
 headless=false
-
-# Timeout Configuration (in seconds)
-implicit.wait=10
-explicit.wait=15
-page.load.timeout=30
-
-# Test Environment
-environment=test
