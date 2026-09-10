@@ -14,28 +14,27 @@ import java.time.Duration;
  * Contains methods to verify login success and access common elements
  */
 public class DashboardPage {
-    
+
     private WebDriver driver;
     private WebDriverWait wait;
-    
+
     // Locators
     private By userAvatarLocator = By.id("header-member-menu-avatar");
     private By boardsHeaderLocator = By.cssSelector("h1[data-testid='home-sidebar-title']");
     private By createBoardButtonLocator = By.cssSelector("button[data-testid='create-board-tile']");
     private By headerLocator = By.id("header");
-    private By accountMenuLocator = By.id("header-member-menu-avatar");
     private By logoutButtonLocator = By.cssSelector("button[data-testid='account-menu-logout']");
     private By logoutSubmitButtonLocator = By.id("logout-submit");
-    
+
     // Constructor
     public DashboardPage(WebDriver driver) {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
     }
-    
+
     /**
      * Verify if user is logged in by checking for user avatar
-     * 
+     *
      * @return true if user is logged in, false otherwise
      */
     public boolean isUserLoggedIn() {
@@ -46,10 +45,10 @@ public class DashboardPage {
             return false;
         }
     }
-    
+
     /**
      * Verify if dashboard page is loaded by checking header
-     * 
+     *
      * @return true if dashboard is loaded, false otherwise
      */
     public boolean isDashboardLoaded() {
@@ -59,28 +58,28 @@ public class DashboardPage {
             return false;
         }
     }
-    
+
     /**
      * Get the current page title
-     * 
+     *
      * @return Page title
      */
     public String getPageTitle() {
         return driver.getTitle();
     }
-    
+
     /**
      * Get current URL
-     * 
+     *
      * @return Current URL
      */
     public String getCurrentUrl() {
         return driver.getCurrentUrl();
     }
-    
+
     /**
      * Check if create board button is visible
-     * 
+     *
      * @return true if create board button is visible
      */
     public boolean isCreateBoardButtonVisible() {
@@ -90,34 +89,49 @@ public class DashboardPage {
             return false;
         }
     }
-    
+
     /**
-     * Perform logout operation
-     * Two-step process: 
-     * 1. Click account menu -> logout option
+     * Perform logout operation.
+     * Two-step process:
+     * 1. Click account menu (avatar) -> logout option
      * 2. Click logout-submit button on confirmation page
+     *
+     * Failures propagate to the test - a broken logout must fail the test,
+     * not disappear into a log line.
      */
     public void logout() {
+        WebElement accountMenu = wait.until(ExpectedConditions.elementToBeClickable(userAvatarLocator));
+        accountMenu.click();
+
+        WebElement logoutButton = wait.until(ExpectedConditions.elementToBeClickable(logoutButtonLocator));
+        logoutButton.click();
+
+        WebElement logoutSubmitButton = wait.until(ExpectedConditions.elementToBeClickable(logoutSubmitButtonLocator));
+        logoutSubmitButton.click();
+    }
+
+    /**
+     * Wait until the logout flow completes: redirected to a login/logged-out page
+     * or the user avatar is gone.
+     *
+     * @return true if logged out in time, false on timeout
+     */
+    public boolean isLoggedOut() {
         try {
-            // Step 1: Click on account menu button
-            WebElement accountMenu = wait.until(ExpectedConditions.elementToBeClickable(accountMenuLocator));
-            accountMenu.click();
-            
-            // Step 2: Click logout button in menu
-            WebElement logoutButton = wait.until(ExpectedConditions.elementToBeClickable(logoutButtonLocator));
-            logoutButton.click();
-            
-            // Step 3: Click final logout submit button on confirmation page
-            WebElement logoutSubmitButton = wait.until(ExpectedConditions.elementToBeClickable(logoutSubmitButtonLocator));
-            logoutSubmitButton.click();
+            return wait.until(d -> {
+                String url = d.getCurrentUrl();
+                return url.contains("logged-out")
+                        || url.contains("login")
+                        || !isUserAvatarDisplayed();
+            });
         } catch (Exception e) {
-            System.out.println("Logout failed: " + e.getMessage());
+            return false;
         }
     }
-    
+
     /**
      * Check if user avatar is displayed
-     * 
+     *
      * @return true if avatar is visible
      */
     public boolean isUserAvatarDisplayed() {
@@ -127,7 +141,7 @@ public class DashboardPage {
             return false;
         }
     }
-    
+
     /**
      * Wait for dashboard to fully load
      * Useful for teammates to ensure page is ready before performing actions
