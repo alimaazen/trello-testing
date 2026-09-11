@@ -2,11 +2,14 @@ package pages;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.Keys;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
+import java.util.List;
 import utils.TestData;
 
 public class CardPage {
@@ -39,6 +42,7 @@ public class CardPage {
 
     //these are the declarations which are made by harshit
     private By descriptionButton = By.cssSelector("button[data-testid='description-button']");
+    private By editDescriptionButton = By.cssSelector("button[aria-label='Edit description']");
     private By descriptionField = By.id("ak-editor-textarea");
     private By descriptionSaveButton = By.cssSelector("button[data-testid='description-save-button']");
     private By labelsButton = By.xpath("//button[normalize-space()='Labels']");
@@ -51,6 +55,16 @@ public class CardPage {
     private By checklistAddButton = By.cssSelector("button[data-testid='checklist-add-button']");
     private By checklistItemInput = By.cssSelector("textarea[data-testid='check-item-name-input']");
     private By checklistItemAddButton = By.cssSelector("button[data-testid='check-item-add-button']");
+
+    private By addToCardButton = By.xpath("//button[@aria-label='Add to card']");
+    private By attachmentButton = By.cssSelector("[data-testid='card-back-attachment-button']");
+    private By attachLinkInput = By.cssSelector("input[data-testid='link-url']");
+    private By attachLinkSubmitButton = By.cssSelector("[data-testid='link-picker-insert-button']");
+    private By attachmentsListItem = By.cssSelector("[data-testid='attachment-links-list'] li");
+
+    private By coverButton = By.cssSelector("[data-testid='card-back-cover-button']");
+    private By coverColorSwatch = By.cssSelector("[data-testid^='color-tile-']");
+    private By coverAppliedIndicator = By.cssSelector("[data-testid='card-cover']");
 
 
     // ─────────────────────────────────────────────
@@ -174,31 +188,43 @@ public class CardPage {
         By card = By.xpath(
                 "//*[@data-testid='card-name' and normalize-space()='" + cardTitle + "']"
         );
+        By closeDialogButton = By.cssSelector("button[aria-label='Close dialog']");
 
-        WebElement cardElement = wait.until(
-                ExpectedConditions.elementToBeClickable(card)
-        );
-
-        cardElement.click();
-
-        // Wait until the card modal is actually open
-        wait.until(
-                ExpectedConditions.visibilityOfElementLocated(
-                        By.cssSelector("button[aria-label='Close dialog']")
-                )
-        );
-
-        System.out.println("STEP: Card opened successfully: " + cardTitle);
+        // The click occasionally doesn't open the modal (board re-render timing) -
+        // retry with a JS-click fallback rather than failing outright, same pattern
+        // used for DashboardPage.openBoard().
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            WebElement cardElement = wait.until(ExpectedConditions.elementToBeClickable(card));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", cardElement);
+            try {
+                cardElement.click();
+            } catch (Exception e) {
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", cardElement);
+            }
+            try {
+                wait.until(ExpectedConditions.visibilityOfElementLocated(closeDialogButton));
+                System.out.println("STEP: Card opened successfully: " + cardTitle);
+                return;
+            } catch (TimeoutException e) {
+                if (attempt == 2) {
+                    throw e;
+                }
+                System.out.println("STEP: Card modal did not open on attempt " + attempt + ", retrying...");
+            }
+        }
     }
     public void clickDescription() {
 
         System.out.println("STEP: Clicking Description...");
 
-        WebElement description =
-                wait.until(
-                        ExpectedConditions.elementToBeClickable(descriptionButton)
-                );
+        // Once a description is already saved, the "Add a more detailed description"
+        // button is replaced by an "Edit description" button - pick whichever is present.
+        List<WebElement> addButton = driver.findElements(descriptionButton);
+        By target = (!addButton.isEmpty() && addButton.get(0).isDisplayed())
+                ? descriptionButton
+                : editDescriptionButton;
 
+        WebElement description = wait.until(ExpectedConditions.elementToBeClickable(target));
         description.click();
 
         System.out.println("STEP: Description opened.");
@@ -210,6 +236,10 @@ public class CardPage {
         );
 
         field.click();
+        // The field may already contain previously-saved text (Edit flow on a reused
+        // fixture card) - it's a rich-text editor, not a plain input, so .clear() is a
+        // no-op; select-all + delete first or the new text gets interleaved with the old.
+        field.sendKeys(Keys.chord(Keys.CONTROL, "a"), Keys.DELETE);
         field.sendKeys(description);
     }
     public boolean isDescriptionEntered(String expectedDescription) {
@@ -234,19 +264,24 @@ public class CardPage {
     public boolean isSavedDescriptionDisplayed(String expectedDescription) {
 
         By savedDescription = By.cssSelector(
-                "div[aria-label='Edit description']"
+                "[data-testid='description-content-area']"
         );
 
-        WebElement description = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(savedDescription)
-        );
+        try {
+            WebElement description = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(savedDescription)
+            );
 
-        String actualDescription = description.getText();
+            String actualDescription = description.getText();
 
-        System.out.println("Expected saved description: " + expectedDescription);
-        System.out.println("Actual saved description: " + actualDescription);
+            System.out.println("Expected saved description: " + expectedDescription);
+            System.out.println("Actual saved description: " + actualDescription);
 
-        return actualDescription.trim().equals(expectedDescription.trim());
+            return actualDescription.trim().equals(expectedDescription.trim());
+        } catch (Exception e) {
+            System.out.println("Saved description not found: " + e.getMessage());
+            return false;
+        }
     }
 
     public void clickLabels() {
@@ -295,6 +330,10 @@ public class CardPage {
 
         closeButton.click();
 
+        // Wait for the dialog to actually finish closing - otherwise the overlay can
+        // still intercept the very next click (e.g. reopening the same card immediately).
+        wait.until(ExpectedConditions.invisibilityOfElementLocated(closeCardButton));
+
         System.out.println("STEP: Card closed successfully.");
     }
     public boolean isLabelApplied(String color) {
@@ -303,17 +342,36 @@ public class CardPage {
                 "button[data-testid='compact-card-label'][data-color='" + color + "']"
         );
 
-        WebElement label = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(appliedLabel)
-        );
+        try {
+            WebElement label = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(appliedLabel)
+            );
 
-        boolean displayed = label.isDisplayed();
+            boolean displayed = label.isDisplayed();
 
-        System.out.println(
-                "STEP: Label '" + color + "' displayed on card: " + displayed
-        );
+            System.out.println(
+                    "STEP: Label '" + color + "' displayed on card: " + displayed
+            );
 
-        return displayed;
+            return displayed;
+        } catch (Exception e) {
+            System.out.println("STEP: Label '" + color + "' not applied.");
+            return false;
+        }
+    }
+
+    /**
+     * Applies the label only if it is not already applied. Selecting an already-applied
+     * label toggles it OFF in Trello, so a plain selectLabel() is not safe to call twice
+     * (e.g. on a reused fixture card across test reruns).
+     */
+    public void ensureLabelApplied(String color) {
+        if (isLabelApplied(color)) {
+            System.out.println("STEP: Label '" + color + "' already applied, skipping.");
+            return;
+        }
+        clickLabels();
+        selectLabel(color);
     }
     public void clickAppliedLabel(String color) {
 
@@ -338,10 +396,17 @@ public class CardPage {
 
         System.out.println("STEP: Clicking Dates...");
 
-        By datesButton = By.xpath("//button[normalize-space()='Dates']");
+        // Once a due date is already set, the "Dates" quick-action button is replaced by
+        // a due-date badge button (e.g. "Sep 15, 8:21 PM") - clicking it reopens the same
+        // date editor. Pick whichever is actually present.
+        By datesQuickButton = By.xpath("//button[normalize-space()='Dates']");
+        By dueDateBadge = By.cssSelector("button[data-testid='due-date-badge-with-date-range-picker']");
+
+        List<WebElement> quick = driver.findElements(datesQuickButton);
+        By target = (!quick.isEmpty() && quick.get(0).isDisplayed()) ? datesQuickButton : dueDateBadge;
 
         WebElement dates = wait.until(
-                ExpectedConditions.presenceOfElementLocated(datesButton)
+                ExpectedConditions.presenceOfElementLocated(target)
         );
 
         ((JavascriptExecutor) driver).executeScript(
@@ -388,16 +453,21 @@ public class CardPage {
                 "button[data-testid='due-date-badge-with-date-range-picker']"
         );
 
-        WebElement dueDate = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(savedDueDate)
-        );
+        try {
+            WebElement dueDate = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(savedDueDate)
+            );
 
-        String actualDate = dueDate.getText();
+            String actualDate = dueDate.getText();
 
-        System.out.println("Expected Due Date: " + expectedDate);
-        System.out.println("Actual Due Date: " + actualDate);
+            System.out.println("Expected Due Date: " + expectedDate);
+            System.out.println("Actual Due Date: " + actualDate);
 
-        return actualDate.contains(expectedDate);
+            return actualDate.contains(expectedDate);
+        } catch (Exception e) {
+            System.out.println("Due date badge not found: " + e.getMessage());
+            return false;
+        }
     }
     public void clickChecklist() {
 
@@ -469,63 +539,97 @@ public class CardPage {
 
         System.out.println("STEP: Checklist item added successfully.");
     }
+    /**
+     * The checklist item's name is only exposed via the aria-label of its checkbox input
+     * in this Trello UI - there is no separate visible text element carrying the name, so
+     * this is the one reliable locator for a specific item.
+     */
+    private By checklistItemCheckboxInput(String itemName) {
+        return By.xpath("//input[@type='checkbox' and @aria-label='" + itemName + "']");
+    }
+
+    /**
+     * The checkbox <input> is visually hidden behind its wrapping label - Chrome redirects
+     * any click aimed at the input to this label ("element would receive the click"), and
+     * clicking the input directly via JS does not trigger Trello's React toggle handler at
+     * all. This label is the real, reliable click target.
+     */
+    private By checklistItemCheckboxLabel(String itemName) {
+        return By.xpath("//label[@data-testid='clickable-checkbox'][.//input[@aria-label='" + itemName + "']]");
+    }
+
     public boolean isChecklistItemDisplayed(String expectedItem) {
 
-        By checklistItem = By.cssSelector(
-                "[data-testid='check-item-name']"
-        );
+        By checkboxInput = checklistItemCheckboxInput(expectedItem);
 
-        WebElement item = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(checklistItem)
-        );
-
-        String actualItem = item.getText();
-
-        System.out.println("Expected Checklist Item: " + expectedItem);
-        System.out.println("Actual Checklist Item: " + actualItem);
-
-        return actualItem.trim().equals(expectedItem.trim());
+        try {
+            WebElement item = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(checkboxInput)
+            );
+            return item.isDisplayed();
+        } catch (Exception e) {
+            System.out.println("Checklist item '" + expectedItem + "' not found: " + e.getMessage());
+            return false;
+        }
     }
+
+    /**
+     * Checks whether a checklist with the given name already exists on the card.
+     * Used to avoid creating duplicate checklists when the fixture card is reused across runs.
+     * Uses contains() rather than an exact match - the title element's accessible text
+     * includes a hidden "Checklist" prefix concatenated with the visible name.
+     */
+    public boolean isChecklistPresent(String checklistName) {
+        By checklistHeading = By.xpath(
+                "//h3[@data-testid='checklist-title'][contains(normalize-space(), '" + checklistName + "')]"
+        );
+        try {
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(3));
+            return shortWait.until(ExpectedConditions.visibilityOfElementLocated(checklistHeading)).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Checks the item only if not already checked - re-clicking an already-checked
+     * checkbox toggles it back off, which is exactly what happened across reruns
+     * of the fixture card before this guard existed.
+     */
     public void checkChecklistItem(String itemName) {
+
+        if (isChecklistItemChecked(itemName)) {
+            System.out.println("STEP: Checklist item '" + itemName + "' already checked, skipping.");
+            return;
+        }
 
         System.out.println("STEP: Checking checklist item: " + itemName);
 
-        By checkboxLabel = By.xpath(
-                "//li[@data-testid='check-item-container']" +
-                        "[.//*[@data-testid='check-item-name' and normalize-space()='" + itemName + "']]" +
-                        "//label[@data-testid='clickable-checkbox']"
-        );
-
         WebElement label = wait.until(
-                ExpectedConditions.elementToBeClickable(checkboxLabel)
+                ExpectedConditions.elementToBeClickable(checklistItemCheckboxLabel(itemName))
         );
 
         label.click();
+
+        // The click is optimistic-UI, not instant - wait for the checkbox to actually
+        // flip rather than assuming the click landed by the time we return.
+        wait.until(d -> d.findElement(checklistItemCheckboxInput(itemName)).isSelected());
 
         System.out.println(
                 "STEP: Checklist item checked: " + itemName
         );
     }
+
     public boolean isChecklistItemChecked(String itemName) {
-        By checkboxLabel = By.xpath(
-                "//li[@data-testid='check-item-container']" +
-                        "[.//*[@data-testid='check-item-name' and normalize-space()='" + itemName + "']]" +
-                        "//label[@data-testid='clickable-checkbox']"
+        WebElement checkbox = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(checklistItemCheckboxInput(itemName))
         );
 
-        WebElement label = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(checkboxLabel)
-        );
+        // .isSelected() reflects the live checked property - unlike scraping class names
+        // or innerHTML, which are unreliable (e.g. the literal attribute name
+        // "aria-checked" itself contains the substring "checked" regardless of its value).
+        boolean checked = checkbox.isSelected();
 
-        String className = label.getAttribute("class");
-        String innerHtml = label.getAttribute("innerHTML");
-
-        boolean checked =
-                (className != null && className.toLowerCase().contains("checked")) ||
-                        (innerHtml != null && innerHtml.toLowerCase().contains("checked"));
-
-        System.out.println("DEBUG Checkbox class: " + className);
-        System.out.println("DEBUG Checkbox HTML: " + innerHtml);
         System.out.println("STEP: Checklist item '" + itemName + "' checked: " + checked);
 
         return checked;
@@ -561,5 +665,122 @@ public class CardPage {
         System.out.println("Role: " + label.getAttribute("role"));
         System.out.println("HTML: " + label.getAttribute("outerHTML"));
         System.out.println("============================");
+    }
+
+    // ─────────────────────────────────────────────
+    // ATTACHMENTS (link attachment)
+    // ─────────────────────────────────────────────
+
+    public void clickAttachment() {
+        System.out.println("STEP: Opening 'Add to card' menu...");
+        clickWithRetry(addToCardButton);
+
+        System.out.println("STEP: Clicking Attachment...");
+        clickWithRetry(attachmentButton);
+        System.out.println("STEP: Attachment menu opened.");
+    }
+
+    /**
+     * Scrolls the element into view and clicks it, retrying once with a JS-click fallback
+     * if the first attempt throws (e.g. a transient overlay/re-render intercepts the click) -
+     * same defensive pattern used for openBoard()/openCard() to survive React re-render timing.
+     */
+    private void clickWithRetry(By locator) {
+        WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", element);
+        try {
+            element.click();
+        } catch (Exception e) {
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+        }
+    }
+
+    public void attachLink(String url) {
+        System.out.println("STEP: Attaching link: " + url);
+        WebElement field = wait.until(ExpectedConditions.visibilityOfElementLocated(attachLinkInput));
+        field.click();
+        field.clear();
+        field.sendKeys(url);
+    }
+
+    public void confirmAttachLink() {
+        System.out.println("STEP: Confirming link attachment...");
+        WebElement submit = wait.until(ExpectedConditions.elementToBeClickable(attachLinkSubmitButton));
+        submit.click();
+        System.out.println("STEP: Link attachment submitted.");
+    }
+
+    /**
+     * Checks whether an attachment matching the given URL/name fragment is already present.
+     * Used to avoid re-attaching the same link when the fixture card is reused across runs.
+     */
+    public boolean isAttachmentPresent(String urlOrNameFragment) {
+        try {
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            return shortWait.until(d -> {
+                for (WebElement el : d.findElements(attachmentsListItem)) {
+                    String text = el.getText();
+                    String href = el.getAttribute("href");
+                    if ((text != null && text.contains(urlOrNameFragment))
+                            || (href != null && href.contains(urlOrNameFragment))) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void ensureLinkAttached(String url) {
+        if (isAttachmentPresent(url)) {
+            System.out.println("STEP: Attachment '" + url + "' already present, skipping.");
+            return;
+        }
+        clickAttachment();
+        attachLink(url);
+        confirmAttachLink();
+    }
+
+    // ─────────────────────────────────────────────
+    // COVER (solid color)
+    // ─────────────────────────────────────────────
+
+    public void clickCover() {
+        System.out.println("STEP: Clicking Cover...");
+        WebElement button = wait.until(ExpectedConditions.elementToBeClickable(coverButton));
+        button.click();
+        System.out.println("STEP: Cover menu opened.");
+    }
+
+    public void selectCoverColor() {
+        System.out.println("STEP: Selecting a cover color...");
+        WebElement swatch = wait.until(ExpectedConditions.elementToBeClickable(coverColorSwatch));
+        swatch.click();
+        System.out.println("STEP: Cover color applied.");
+
+        // The cover popover stays open after picking a color and overlaps the
+        // card dialog's own controls (e.g. Close dialog) - dismiss it with Escape.
+        new org.openqa.selenium.interactions.Actions(driver).sendKeys(org.openqa.selenium.Keys.ESCAPE).perform();
+    }
+
+    public boolean isCoverApplied() {
+        try {
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            return shortWait.until(ExpectedConditions.visibilityOfElementLocated(coverAppliedIndicator)).isDisplayed();
+        } catch (Exception e) {
+            System.out.println("Cover indicator not found: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public void ensureCoverApplied() {
+        if (isCoverApplied()) {
+            System.out.println("STEP: Cover already applied, skipping.");
+            return;
+        }
+        clickCover();
+        selectCoverColor();
     }
 }

@@ -19,7 +19,7 @@ public class ListPage {
     // ──────────────────────────────────────────
     // Locators
     // ──────────────────────────────────────────
-    private By addListButton    = By.xpath("//button[contains(.,'Add another list') or contains(.,'Add list')");
+    private By addListButton    = By.xpath("//button[contains(.,'Add another list') or contains(.,'Add list')]");
     private By listNameInput    = By.xpath("//textarea[@data-testid='list-name-textarea']");
     private By submitListButton = By.xpath("//button[@data-testid='list-composer-add-list-button']");
 

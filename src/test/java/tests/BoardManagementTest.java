@@ -1,6 +1,6 @@
 package tests;
 
-import base.BaseTest;
+import utils.BaseTest;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import pages.BoardPage;

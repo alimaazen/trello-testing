@@ -1,6 +1,8 @@
 package pages;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -149,5 +151,47 @@ public class DashboardPage {
     public void waitForDashboardToLoad() {
         wait.until(ExpectedConditions.visibilityOfElementLocated(headerLocator));
         wait.until(ExpectedConditions.visibilityOfElementLocated(userAvatarLocator));
+    }
+
+    /**
+     * Check whether a board with the given name is already present on the dashboard.
+     * Used for idempotent test fixtures - reuse an existing board instead of creating a duplicate.
+     *
+     * @param boardName Board name to look for
+     * @return true if a board tile with this name is visible
+     */
+    public boolean isBoardPresent(String boardName) {
+        try {
+            By boardTile = By.xpath("//a[normalize-space()='" + boardName + "']");
+            return wait.until(ExpectedConditions.visibilityOfElementLocated(boardTile)).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Opens an existing board by name from the dashboard.
+     *
+     * @param boardName Board name to open
+     */
+    public void openBoard(String boardName) {
+        By boardTile = By.xpath("//a[normalize-space()='" + boardName + "']");
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            WebElement board = wait.until(ExpectedConditions.elementToBeClickable(boardTile));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", board);
+            try {
+                board.click();
+            } catch (Exception e) {
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", board);
+            }
+            try {
+                wait.until(ExpectedConditions.urlContains("/b/"));
+                return;
+            } catch (TimeoutException e) {
+                if (attempt == 2) {
+                    throw e;
+                }
+            }
+        }
     }
 }
