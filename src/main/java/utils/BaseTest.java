@@ -10,9 +10,7 @@ import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Listeners;
+import org.testng.annotations.*;
 import pages.DashboardPage;
 import pages.LoginPage;
 
@@ -33,7 +31,7 @@ public class BaseTest {
     protected DashboardPage dashboardPage;
     protected TestConfig config;
 
-    @BeforeMethod
+    @BeforeClass
     public void setUp() {
         config = new TestConfig();
         driver = createDriver();
@@ -154,7 +152,7 @@ public class BaseTest {
         return CURRENT_DRIVER.get();
     }
 
-    @AfterMethod
+    @AfterClass
     public void tearDown() {
         if (driver != null) {
             driver.quit();
