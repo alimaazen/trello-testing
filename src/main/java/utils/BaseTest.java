@@ -1,8 +1,10 @@
 package utils;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
+import org.openqa.selenium.By;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
@@ -93,6 +95,7 @@ public class BaseTest {
                             + "trello.password to src/test/resources/config.properties.");
         }
         performLogin(config.getProperty("trello.email"), config.getProperty("trello.password"));
+        dismissCookieBannerIfPresent();
         if (!dashboardPage.isUserLoggedIn()) {
             throw new IllegalStateException(
                     "Login failed: dashboard did not load after submitting credentials. "
@@ -120,6 +123,21 @@ public class BaseTest {
      */
     public void navigateToLoginPage() {
         driver.get(config.getProperty("trello.url"));
+    }
+
+    /**
+     * Dismisses the cookie-consent banner if it appears (fresh sessions only).
+     * Left unhandled, the banner can intercept clicks meant for board tiles / buttons.
+     */
+    protected void dismissCookieBannerIfPresent() {
+        try {
+            java.util.List<WebElement> acceptAll = driver.findElements(By.cssSelector("[data-testid='accept-all-button']"));
+            if (!acceptAll.isEmpty() && acceptAll.get(0).isDisplayed()) {
+                acceptAll.get(0).click();
+                Thread.sleep(500);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     /**
