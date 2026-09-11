@@ -1,13 +1,14 @@
 package tests;
 
-import base.BaseTest;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+import utils.BaseTest;
 
 public class SeleniumTest extends BaseTest {
 
     @Test
     public void verifyTrelloLogin() {
+        performLogin();
 
         System.out.println("Login verification test");
 
