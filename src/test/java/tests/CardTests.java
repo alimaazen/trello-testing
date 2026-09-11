@@ -36,13 +36,6 @@ public class CardTests extends BaseTest {
         );
     }
 
-    private By listAddCardButtonLocator(String listName) {
-        return By.xpath(
-                "//button[@data-testid='list-add-card-button' " +
-                        "and contains(@aria-label, 'Add a card in " + listName + "')]"
-        );
-    }
-
     private By listHeaderLocator(String listName) {
         return By.xpath(
                 "//span[normalize-space(text())='" + listName + "']"
