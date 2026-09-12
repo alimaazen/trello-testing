@@ -27,20 +27,20 @@ public class BoardPage {
     private final By boardTitleDisplay = By.cssSelector("h1[data-testid='board-name-display']");
     private final By boardTitleInputField = By.cssSelector("input[data-testid='board-name-input']");
     private final By boardStarBtn = By.cssSelector("button[aria-label='Star or unstar board']");
-    
+
     // Board Menu & Operations
     private final By showMenuBtn = By.cssSelector("button[aria-label='Show menu'], button[data-testid='overflow-menu-button'], button[class*='board-header-btn-menu']");
     private final By changeBackgroundBtn = By.xpath("//*[contains(@data-testid, 'change-background') or contains(text(), 'Change background') or contains(@class, 'change-background')]");
     private final By backgroundColorsOption = By.xpath("//*[contains(@data-testid, 'background-colors') or contains(text(), 'Colors') or contains(@class, 'colors')]");
     private final By colorTile = By.cssSelector("[class*='board-menu'] button[style*='background'], [class*='popover'] button[style*='background'], button[style*='background'], [class*='background-box']");
- 
+
     private final By closeBoardMenuLink = By.xpath("//*[contains(@data-testid, 'close-board') or contains(text(), 'Close board') or contains(@class, 'js-close-board')]");
     private final By closeConfirmBtn = By.xpath("//button[normalize-space(.)='Close'] | //input[@value='Close'] | //*[contains(@data-testid, 'confirm-button')] | //*[contains(@class, 'js-confirm')]");
     private final By closedBoardMessage = By.xpath("//*[contains(text(), 'This board is closed') or contains(text(), 'board is closed') or @data-testid='close-board-big-message' or @data-testid='close-board-message']");
     private final By reopenBoardBtn = By.xpath("//button[@data-testid='workspace-chooser-trigger-button' and contains(., 'Reopen')] | //button[@data-testid='workspace-chooser-reopen-button'] | //button[normalize-space(.)='Reopen board']");
     private final By permanentDeleteLink = By.xpath("//*[contains(@data-testid, 'delete-board') or contains(text(), 'Permanently delete board') or contains(@class, 'js-delete-board')]");
     private final By deleteConfirmBtn = By.xpath("//button[normalize-space(.)='Delete'] | //input[@value='Delete'] | //*[contains(@data-testid, 'confirm-button')]");
- 
+
     // Visibility
     private final By boardVisibilityBtn = By.cssSelector("button[data-testid*='visibility'], button[aria-label*='Visibility'], button[id*='permission'], button[class*='vis']");
     private final By privateVisibilityOption = By.xpath("//*[contains(@data-testid, 'private') or contains(text(), 'Private') or contains(@class, 'private')]");
@@ -51,8 +51,18 @@ public class BoardPage {
     }
 
     /**
-     * Resilient click helper that falls back to Actions and JavascriptExecutor if standard click is intercepted.
+     * Finds and clicks an existing board tile by its visible name.
+     * @param boardName The exact name of the board as displayed on the home screen.
      */
+    public void openExistingBoard(String boardName) {
+        WebElement board = driver.findElement(
+                By.xpath("//a[@title='" + boardName + "' and @aria-label='" + boardName + "']")
+        );
+        board.click();
+    }
+    /**
+            * Resilient click helper that falls back to Actions and JavascriptExecutor if standard click is intercepted.
+            */
     private void safeClick(By locator) {
         WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
         try {
@@ -105,7 +115,7 @@ public class BoardPage {
         }
 
         safeClick(headerCreateBoardBtn);
-        
+
         try {
             safeType(boardTitleInput, name);
         } catch (Exception e) {
@@ -128,7 +138,7 @@ public class BoardPage {
         }
 
         safeClick(finalCreateBtn);
-        
+
         // Wait until redirected to the board URL
         wait.until(ExpectedConditions.urlContains("/b/"));
     }
@@ -156,7 +166,7 @@ public class BoardPage {
 
         // Wait for the display title to update
         wait.until(ExpectedConditions.textToBePresentInElementLocated(boardTitleDisplay, newName));
-        
+
         // Click the board canvas/background to release focus from the edit field
         try {
             driver.findElement(By.cssSelector("div.board-canvas, #board, .board-main-content")).click();
@@ -224,7 +234,7 @@ public class BoardPage {
     public void closeBoard() {
         System.out.println("[DEBUG closeBoard] Starting closeBoard procedure...");
         WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(2));
-        
+
         // 1. Try to see if the board is already closed
         try {
             if (driver.findElement(closedBoardMessage).isDisplayed()) {
@@ -343,7 +353,7 @@ public class BoardPage {
      */
     public void reopenBoard() {
         System.out.println("[DEBUG reopenBoard] Starting reopen board procedure...");
-        
+
         System.out.println("[DEBUG reopenBoard] Printing all buttons or testid elements in DOM before searching:");
         try {
             for (WebElement el : driver.findElements(By.cssSelector("button, [data-testid]"))) {
@@ -414,7 +424,7 @@ public class BoardPage {
      */
     public void deleteBoardPermanently() {
         System.out.println("[DEBUG deleteBoardPermanently] Starting permanent delete procedure...");
-        
+
         System.out.println("[DEBUG deleteBoardPermanently] Printing all elements in DOM containing delete/permanently:");
         try {
             for (WebElement el : driver.findElements(By.cssSelector("a, button, p, span, div"))) {

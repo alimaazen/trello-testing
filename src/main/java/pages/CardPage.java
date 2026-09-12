@@ -120,6 +120,7 @@ public class CardPage {
      * @param cardTitle - Title of the card to be created
      */
     public void enterCardTitle(String cardTitle) {
+
         System.out.println("STEP: Entering card title: " + cardTitle);
 
         WebElement titleBox = wait.until(
@@ -136,9 +137,8 @@ public class CardPage {
     public void clickAddCardSubmit() {
         System.out.println("STEP: Clicking 'Add card' submit button...");
 
-        wait.until(
-                ExpectedConditions.elementToBeClickable(addCardSubmitButton)
-        ).click();
+        wait.until(ExpectedConditions.elementToBeClickable(
+                addCardSubmitButton)).click();
 
         System.out.println("STEP: Card submitted successfully.");
     }
