@@ -68,6 +68,20 @@ public class LoginPage {
     }
 
     /**
+     * Get the email input element, for layout/rendering assertions.
+     */
+    public WebElement getEmailInputElement() {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(emailInputLocator));
+    }
+
+    /**
+     * Get the continue button element, for layout/rendering assertions.
+     */
+    public WebElement getContinueButtonElement() {
+        return wait.until(ExpectedConditions.elementToBeClickable(continueButtonLocator));
+    }
+
+    /**
      * Enter password in the password field
      *
      * @param password User password

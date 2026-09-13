@@ -320,6 +320,33 @@ public class CardPage {
 
         System.out.println("STEP: Label selected: " + color);
     }
+    /**
+     * Get the "Add a card" button element for the current fixture list, for layout/rendering assertions.
+     */
+    public WebElement getAddCardButtonElement() {
+        By addCardBtn = By.xpath("//button[@aria-label='Add a card in " + TestData.listName + "']");
+        return wait.until(ExpectedConditions.elementToBeClickable(addCardBtn));
+    }
+
+    /**
+     * Get the card dialog's close button element, for layout/rendering assertions.
+     */
+    public WebElement getCloseCardButtonElement() {
+        return wait.until(ExpectedConditions.elementToBeClickable(closeCardButton));
+    }
+
+    /**
+     * Get the description area/button element (whichever of add/edit is currently present),
+     * for layout/rendering assertions.
+     */
+    public WebElement getDescriptionAreaElement() {
+        List<WebElement> addButton = driver.findElements(descriptionButton);
+        By target = (!addButton.isEmpty() && addButton.get(0).isDisplayed())
+                ? descriptionButton
+                : editDescriptionButton;
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(target));
+    }
+
     public void closeCard() {
 
         System.out.println("STEP: Closing card...");
