@@ -105,6 +105,8 @@ Rendering and layout validation across viewport widths (1920 desktop, 1280 lapto
 | `testDashboardLayout` | Header and create-board button stay visible/clickable on the dashboard at every viewport width |
 | `testBoardPageLayout` | Board title and add-list control stay visible/clickable on a board at every viewport width |
 | `testCardModalLayout` | Card modal (description area, close button) stays fully visible and closeable at every viewport width |
+| `testChecklistPanelLayout` | An existing checklist item's row stays visible, clickable, and fully within the viewport at every viewport width |
+| `testCoverColorPickerLayout` | The cover color swatch grid stays visible/clickable and unclipped, and doesn't cause horizontal overflow, at every viewport width |
 
 To cover all three browsers, rerun the class with a different `BROWSER` environment variable each time (no code changes needed - `TestConfig` already reads it):
 

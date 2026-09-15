@@ -12,6 +12,8 @@ import utils.BaseTest;
 import utils.ResponsiveUtils;
 import utils.TestData;
 
+import java.util.List;
+
 /**
  * UI/UX & Cross-Browser Validation module.
  *
@@ -30,6 +32,8 @@ public class UIUXCrossBrowserTests extends BaseTest {
     private static final String FIXED_BOARD_NAME = "UI UX Cross Browser Test Board";
     private static final String FIXED_LIST_NAME = "To Do";
     private static final String FIXED_CARD_NAME = "UI UX Test Card";
+    private static final String FIXED_CHECKLIST_NAME = "UI UX Checklist";
+    private static final String FIXED_CHECKLIST_ITEM = "Verify layout";
 
     private BoardPage boardPage;
     private ListPage listPage;
@@ -182,6 +186,72 @@ public class UIUXCrossBrowserTests extends BaseTest {
         Assert.assertTrue(ResponsiveUtils.isVisibleWithinViewport(driver, closeButton),
                 viewportName + ": close button should be within the visible viewport, not clipped off-screen");
 
+        cardPage.closeCard();
+    }
+
+    // ─────────────────────────────────────────────
+    // Checklist panel
+    // ─────────────────────────────────────────────
+    @Test(dataProvider = "viewports", description = "Checklist item input and add button stay usable, and the panel doesn't overflow, at every viewport width")
+    public void testChecklistPanelLayout(String viewportName, int width, int height) {
+        ensureFixtureReady();
+        ResponsiveUtils.resizeViewport(driver, width, height);
+
+        cardPage.openCard(FIXED_CARD_NAME);
+
+        if (!cardPage.isChecklistPresent(FIXED_CHECKLIST_NAME)) {
+            clickWithRetry(cardPage::clickChecklist, "checklist button");
+            cardPage.enterChecklistName(FIXED_CHECKLIST_NAME);
+            cardPage.addChecklist();
+        }
+
+        if (!cardPage.isChecklistItemDisplayed(FIXED_CHECKLIST_ITEM)) {
+            cardPage.enterChecklistItem(FIXED_CHECKLIST_ITEM);
+            cardPage.addChecklistItem();
+        }
+
+        WebElement checklistItemRow = cardPage.getChecklistItemCheckboxElement(FIXED_CHECKLIST_ITEM);
+
+        Assert.assertTrue(checklistItemRow.isDisplayed(), viewportName + ": checklist item row should be visible");
+        Assert.assertTrue(checklistItemRow.isEnabled(),
+                viewportName + ": checklist item row should be clickable");
+        Assert.assertTrue(ResponsiveUtils.isVisibleWithinViewport(driver, checklistItemRow),
+                viewportName + ": checklist item row should be within the visible viewport, not clipped off-screen");
+        Assert.assertFalse(ResponsiveUtils.hasHorizontalOverflow(driver),
+                viewportName + ": card modal should not have horizontal overflow with a checklist panel open");
+
+        cardPage.closeCard();
+    }
+
+    // ─────────────────────────────────────────────
+    // Cover color picker
+    // ─────────────────────────────────────────────
+    @Test(dataProvider = "viewports", description = "Cover color swatch grid stays fully visible/clickable and doesn't clip at every viewport width")
+    public void testCoverColorPickerLayout(String viewportName, int width, int height) {
+        ensureFixtureReady();
+        ResponsiveUtils.resizeViewport(driver, width, height);
+
+        cardPage.openCard(FIXED_CARD_NAME);
+        clickWithRetry(cardPage::clickCover, "cover button");
+
+        List<WebElement> swatches = cardPage.getCoverColorSwatchElements();
+        Assert.assertFalse(swatches.isEmpty(), viewportName + ": cover color swatches should be present");
+
+        WebElement firstSwatch = swatches.get(0);
+        WebElement lastSwatch = swatches.get(swatches.size() - 1);
+
+        Assert.assertTrue(firstSwatch.isDisplayed() && firstSwatch.isEnabled(),
+                viewportName + ": first cover color swatch should be visible and clickable");
+        Assert.assertTrue(lastSwatch.isDisplayed() && lastSwatch.isEnabled(),
+                viewportName + ": last cover color swatch should be visible and clickable");
+        Assert.assertTrue(ResponsiveUtils.isVisibleWithinViewport(driver, firstSwatch),
+                viewportName + ": first cover color swatch should be within the visible viewport, not clipped off-screen");
+        Assert.assertTrue(ResponsiveUtils.isVisibleWithinViewport(driver, lastSwatch),
+                viewportName + ": last cover color swatch should be within the visible viewport, not clipped off-screen");
+        Assert.assertFalse(ResponsiveUtils.hasHorizontalOverflow(driver),
+                viewportName + ": card modal should not have horizontal overflow with the cover picker open");
+
+        cardPage.closeCoverPopover();
         cardPage.closeCard();
     }
 }

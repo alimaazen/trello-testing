@@ -566,6 +566,16 @@ public class CardPage {
 
         System.out.println("STEP: Checklist item added successfully.");
     }
+
+    /**
+     * Get an existing checklist item's clickable checkbox row, for layout/rendering
+     * assertions - unlike the "add item" composer (which collapses on a fresh card
+     * open and needs an extra click to reveal), this row is always visible once the
+     * item exists, making it a stable assertion target regardless of composer state.
+     */
+    public WebElement getChecklistItemCheckboxElement(String itemName) {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(checklistItemCheckboxLabel(itemName)));
+    }
     /**
      * The checklist item's name is only exposed via the aria-label of its checkbox input
      * in this Trello UI - there is no separate visible text element carrying the name, so
@@ -809,5 +819,23 @@ public class CardPage {
         }
         clickCover();
         selectCoverColor();
+    }
+
+    /**
+     * Get every cover color swatch in the open cover popover, for layout/rendering
+     * assertions (a color grid is exactly the kind of element that clips at narrow
+     * viewport widths without necessarily causing page-level horizontal overflow).
+     */
+    public List<WebElement> getCoverColorSwatchElements() {
+        wait.until(ExpectedConditions.visibilityOfElementLocated(coverColorSwatch));
+        return driver.findElements(coverColorSwatch);
+    }
+
+    /**
+     * Dismisses the cover color popover without picking a color - same Escape-key
+     * approach used internally by selectCoverColor() once a color has been applied.
+     */
+    public void closeCoverPopover() {
+        new org.openqa.selenium.interactions.Actions(driver).sendKeys(Keys.ESCAPE).perform();
     }
 }
