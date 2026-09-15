@@ -51,6 +51,13 @@ public class ListPage {
     }
 
     // ──────────────────────────────────────────
+    // Get the "Add a list" element (layout/rendering assertions)
+    // ──────────────────────────────────────────
+    public WebElement getAddListButtonElement() {
+        return wait.until(ExpectedConditions.elementToBeClickable(addListButton));
+    }
+
+    // ──────────────────────────────────────────
     // Enter the List Name
     // ──────────────────────────────────────────
     public void enterListName(String listName) {

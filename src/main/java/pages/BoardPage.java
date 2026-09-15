@@ -141,6 +141,13 @@ public class BoardPage {
     }
 
     /**
+     * Get the board title element, for layout/rendering assertions.
+     */
+    public WebElement getBoardTitleElement() {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(boardTitleDisplay));
+    }
+
+    /**
      * Updates/Renames the board title.
      */
     public void updateBoardTitle(String newName) {

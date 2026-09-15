@@ -93,6 +93,20 @@ public class DashboardPage {
     }
 
     /**
+     * Get the dashboard header element, for layout/rendering assertions.
+     */
+    public WebElement getHeaderElement() {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(headerLocator));
+    }
+
+    /**
+     * Get the create-board button element, for layout/rendering assertions.
+     */
+    public WebElement getCreateBoardButtonElement() {
+        return wait.until(ExpectedConditions.elementToBeClickable(createBoardButtonLocator));
+    }
+
+    /**
      * Perform logout operation.
      * Two-step process:
      * 1. Click account menu (avatar) -> logout option
