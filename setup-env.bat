@@ -24,10 +24,10 @@ echo ========================================================
 echo.
 
 REM Prompt for Trello email
-set /p TRELLO_EMAIL="Enter your Trello test account email: "
+set /p TRELLO_EMAIL="EMAIL"
 
 REM Prompt for Trello password
-set /p TRELLO_PASSWORD="Enter your Trello test account password: "
+set /p TRELLO_PASSWORD="PASSWORD"
 
 echo.
 echo Setting environment variables...
