@@ -95,6 +95,27 @@ trello-testing/
 | `testEmptyCredentialsLogin` | Empty email cannot advance to the password step |
 | `testLogout` | Logout completes and the session is gone |
 
+## UI/UX & Cross-Browser Validation Coverage
+
+Rendering and layout validation across viewport widths (1920 desktop, 1280 laptop/tablet, 375 mobile) and browsers (Chrome, Firefox, Edge - via the `browser` config key). Each test below runs once per viewport through a TestNG `@DataProvider`, asserting key elements stay visible and clickable and that the page has no unintended horizontal overflow.
+
+| Test | Scenario |
+|------|----------|
+| `testLoginPageLayout` | Email input and continue button stay visible/clickable on the login page at every viewport width |
+| `testDashboardLayout` | Header and create-board button stay visible/clickable on the dashboard at every viewport width |
+| `testBoardPageLayout` | Board title and add-list control stay visible/clickable on a board at every viewport width |
+| `testCardModalLayout` | Card modal (description area, close button) stays fully visible and closeable at every viewport width |
+| `testChecklistPanelLayout` | An existing checklist item's row stays visible, clickable, and fully within the viewport at every viewport width |
+| `testCoverColorPickerLayout` | The cover color swatch grid stays visible/clickable and unclipped, and doesn't cause horizontal overflow, at every viewport width |
+
+To cover all three browsers, rerun the class with a different `BROWSER` environment variable each time (no code changes needed - `TestConfig` already reads it):
+
+```bash
+setx BROWSER chrome  && mvn test -Dtest=UIUXCrossBrowserTests
+setx BROWSER firefox && mvn test -Dtest=UIUXCrossBrowserTests
+setx BROWSER edge    && mvn test -Dtest=UIUXCrossBrowserTests
+```
+
 ## For Teammates - Building Your Module
 
 Extend `BaseTest` to inherit browser setup, config, and login:
