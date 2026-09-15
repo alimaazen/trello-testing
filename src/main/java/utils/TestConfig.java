@@ -81,6 +81,16 @@ public class TestConfig {
         return isProvided("trello.email") && isProvided("trello.password");
     }
 
+    /**
+     * Check whether a second Trello account is configured, for collaboration tests
+     * that need two simultaneous logged-in users.
+     *
+     * @return true if both the second email and password are available
+     */
+    public boolean hasSecondAccountCredentials() {
+        return isProvided("trello.email.second") && isProvided("trello.password.second");
+    }
+
     private String lookup(String key) {
         String envValue = System.getenv(toEnvKey(key));
         if (envValue != null && !envValue.isEmpty()) {

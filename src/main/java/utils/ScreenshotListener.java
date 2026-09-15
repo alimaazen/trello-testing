@@ -27,15 +27,20 @@ public class ScreenshotListener implements ITestListener {
 
     @Override
     public void onTestFailure(ITestResult result) {
-        WebDriver driver = BaseTest.currentDriver();
+        captureScreenshot(BaseTest.currentDriver(), result, "");
+        captureScreenshot(BaseTest.currentSecondDriver(), result, "-second");
+    }
+
+    private void captureScreenshot(WebDriver driver, ITestResult result, String suffix) {
         if (!(driver instanceof TakesScreenshot)) {
             return;
         }
         try {
             Files.createDirectories(SCREENSHOT_DIR);
-            String fileName = "%s_%s_%s.png".formatted(
+            String fileName = "%s_%s%s_%s.png".formatted(
                     result.getTestClass().getRealClass().getSimpleName(),
                     result.getMethod().getMethodName(),
+                    suffix,
                     TIMESTAMP.format(LocalDateTime.now()));
             File screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
             Path target = SCREENSHOT_DIR.resolve(fileName);

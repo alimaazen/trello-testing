@@ -10,6 +10,7 @@ import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
@@ -27,11 +28,16 @@ import java.util.function.Predicate;
 public class BaseTest {
 
     private static final ThreadLocal<WebDriver> CURRENT_DRIVER = new ThreadLocal<>();
+    private static final ThreadLocal<WebDriver> CURRENT_SECOND_DRIVER = new ThreadLocal<>();
 
     protected WebDriver driver;
     protected LoginPage loginPage;
     protected DashboardPage dashboardPage;
     protected TestConfig config;
+
+    protected WebDriver secondDriver;
+    protected LoginPage secondLoginPage;
+    protected DashboardPage secondDashboardPage;
 
     @BeforeMethod
     public void setUp() {
@@ -125,6 +131,56 @@ public class BaseTest {
     }
 
     /**
+     * Starts a second, independent browser session and logs in with the second Trello
+     * account, for collaboration tests that need two users interacting simultaneously.
+     * Skips the test (does not fail it) if the second account is not configured, so
+     * teammates without a second account still get a green build.
+     *
+     * @return DashboardPage for the second session
+     */
+    public DashboardPage performSecondLogin() {
+        if (!config.hasSecondAccountCredentials()) {
+            throw new SkipException(
+                    "Second Trello account not configured. Set TRELLO_EMAIL_SECOND and "
+                            + "TRELLO_PASSWORD_SECOND as environment variables (see README) to run "
+                            + "this test.");
+        }
+        secondDriver = createDriver();
+        CURRENT_SECOND_DRIVER.set(secondDriver);
+        secondDriver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
+        secondDriver.manage().window().maximize();
+        secondLoginPage = new LoginPage(secondDriver);
+        secondDashboardPage = new DashboardPage(secondDriver);
+
+        secondDriver.get(config.getProperty("trello.url"));
+        secondLoginPage.login(
+                config.getProperty("trello.email.second"), config.getProperty("trello.password.second"));
+
+        if (!secondDashboardPage.isUserLoggedIn()) {
+            throw new IllegalStateException(
+                    "Second account login failed: dashboard did not load after submitting "
+                            + "credentials. Check TRELLO_EMAIL_SECOND / TRELLO_PASSWORD_SECOND and "
+                            + "confirm the account accepted the Workspace invite and has no 2FA.");
+        }
+        return secondDashboardPage;
+    }
+
+    /**
+     * Get the second WebDriver instance (null until performSecondLogin() has been called).
+     */
+    public WebDriver getSecondDriver() {
+        return secondDriver;
+    }
+
+    /**
+     * Current thread's second driver, used by ScreenshotListener. Do not use in tests -
+     * use getSecondDriver().
+     */
+    static WebDriver currentSecondDriver() {
+        return CURRENT_SECOND_DRIVER.get();
+    }
+
+    /**
      * Waits up to 15 seconds for the condition to become true.
      * Returns false on timeout instead of throwing - useful for
      * "eventually X should happen" style assertions in tests.
@@ -160,5 +216,11 @@ public class BaseTest {
             driver.quit();
         }
         CURRENT_DRIVER.remove();
+
+        if (secondDriver != null) {
+            secondDriver.quit();
+            secondDriver = null;
+        }
+        CURRENT_SECOND_DRIVER.remove();
     }
 }

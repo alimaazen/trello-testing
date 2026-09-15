@@ -27,6 +27,8 @@ public class LoginPage {
     private By loginButtonLocator = By.id("login-submit");
     private By errorMessageLocator = By.id("login-error");
     private By loginFormLocator = By.id("form-login");
+    private By continueWithoutTwoStepLocator =
+            By.xpath("//button[normalize-space(text())='Continue without two-step verification']");
 
     // Constructor
     public LoginPage(WebDriver driver) {
@@ -84,6 +86,22 @@ public class LoginPage {
     public void clickLogin() {
         WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(loginButtonLocator));
         loginButton.click();
+        dismissSecurityReviewIfPresent();
+    }
+
+    /**
+     * Trello sometimes shows a "Security review" interstitial nagging to enable
+     * two-step verification right after login; dismiss it if present so the
+     * dashboard loads normally instead of getting stuck behind it.
+     */
+    private void dismissSecurityReviewIfPresent() {
+        try {
+            WebElement continueButton = new WebDriverWait(driver, Duration.ofSeconds(5))
+                    .until(ExpectedConditions.elementToBeClickable(continueWithoutTwoStepLocator));
+            continueButton.click();
+        } catch (Exception e) {
+            // Interstitial didn't appear - nothing to dismiss.
+        }
     }
 
     /**

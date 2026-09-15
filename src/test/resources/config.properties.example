@@ -15,6 +15,17 @@ trello.url=https://trello.com/login
 # trello.email=your_email@example.com
 # trello.password=your_password
 
+# Second Trello account - required only for the Collaboration module (invites,
+# roles, assigning members, @mentions, watch notifications). This account must
+# already be a member of the same Workspace as the primary account above -
+# add it once manually via Workspace > Members. Board-level invites between
+# two existing Workspace members then complete instantly, with no email
+# confirmation step, which is what makes them automatable.
+# OPTION 1 (Recommended): TRELLO_EMAIL_SECOND / TRELLO_PASSWORD_SECOND env vars
+# OPTION 2: uncomment below
+# trello.email.second=your_second_email@example.com
+# trello.password.second=your_second_password
+
 # Browser Configuration
 # browser: firefox (default) | chrome | edge
 # headless: true | false (default false)
