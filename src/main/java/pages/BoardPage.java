@@ -346,19 +346,59 @@ public class BoardPage {
         
         // Check if there's a billing confirmation dialog (Multi-Board Guest warning)
         try {
-            Thread.sleep(1000);
-            By confirmButtonLocator = By.xpath("//button[contains(., 'Add to board') or contains(., 'Confirm') or @data-testid='multi-board-guest-confirm-button']");
-            List<WebElement> confirmButtons = driver.findElements(confirmButtonLocator);
-            if (!confirmButtons.isEmpty() && confirmButtons.get(0).isDisplayed()) {
-                System.out.println("[DEBUG inviteMemberByEmail] Multi-board guest confirmation dialog detected, clicking confirm...");
-                confirmButtons.get(0).click();
-                System.out.println("[DEBUG inviteMemberByEmail] Confirmation clicked");
-                Thread.sleep(1000);
-            } else {
-                System.out.println("[DEBUG inviteMemberByEmail] No confirmation dialog detected");
+            Thread.sleep(1500);
+            
+            // Look for ALL buttons on the page to see what's available
+            List<WebElement> allButtons = driver.findElements(By.tagName("button"));
+            System.out.println("[DEBUG inviteMemberByEmail] Total buttons visible: " + allButtons.size());
+            
+            // Log visible button texts
+            for (int i = 0; i < Math.min(allButtons.size(), 20); i++) {
+                try {
+                    WebElement btn = allButtons.get(i);
+                    if (btn.isDisplayed()) {
+                        String btnText = btn.getText();
+                        String btnTestId = btn.getAttribute("data-testid");
+                        if (!btnText.isEmpty() || btnTestId != null) {
+                            System.out.println("[DEBUG inviteMemberByEmail] Button[" + i + "]: text='" + btnText + "', testid='" + btnTestId + "'");
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+            
+            // Try multiple locator strategies for confirmation button
+            By[] confirmLocators = {
+                By.xpath("//button[contains(text(), 'Add to board')]"),
+                By.xpath("//button[contains(text(), 'Confirm')]"),
+                By.xpath("//button[contains(., 'Add to board')]"),
+                By.cssSelector("button[data-testid*='confirm']"),
+                By.cssSelector("button[data-testid*='multi-board']"),
+                By.xpath("//button[@type='submit' and contains(@class, 'Button')]")
+            };
+            
+            boolean found = false;
+            for (By locator : confirmLocators) {
+                List<WebElement> buttons = driver.findElements(locator);
+                if (!buttons.isEmpty()) {
+                    WebElement confirmBtn = buttons.get(0);
+                    if (confirmBtn.isDisplayed()) {
+                        System.out.println("[DEBUG inviteMemberByEmail] Found confirmation button with locator: " + locator);
+                        System.out.println("[DEBUG inviteMemberByEmail] Button text: '" + confirmBtn.getText() + "'");
+                        confirmBtn.click();
+                        System.out.println("[DEBUG inviteMemberByEmail] Confirmation button clicked");
+                        Thread.sleep(1500);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!found) {
+                System.out.println("[DEBUG inviteMemberByEmail] No confirmation dialog button found with any locator");
             }
         } catch (Exception e) {
-            System.out.println("[DEBUG inviteMemberByEmail] No confirmation dialog or error checking: " + e.getMessage());
+            System.out.println("[DEBUG inviteMemberByEmail] Error checking for confirmation: " + e.getMessage());
+            e.printStackTrace();
         }
         
         // Wait for the invite to process and member row to appear
