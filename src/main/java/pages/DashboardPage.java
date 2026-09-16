@@ -252,4 +252,40 @@ public class DashboardPage {
             }
         }
     }
+
+    /**
+     * Gets the logged-in user's display name from the account menu.
+     * Useful for collaboration tests to dynamically get the second account's name.
+     *
+     * @return Display name of the currently logged-in user
+     */
+    public String getLoggedInUserDisplayName() {
+        try {
+            // Click avatar to open account menu
+            WebElement avatar = wait.until(ExpectedConditions.elementToBeClickable(userAvatarLocator));
+            avatar.click();
+            
+            // Wait for menu to appear and get the account name
+            // The name is typically in a button or div with the user's name
+            WebElement accountInfo = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector("[data-testid='account-menu-account-button'], [data-testid='header-member-menu-name']")
+            ));
+            
+            String fullText = accountInfo.getText();
+            System.out.println("[DEBUG getLoggedInUserDisplayName] Account info text: " + fullText);
+            
+            // Close the menu by clicking avatar again
+            avatar.click();
+            
+            // Parse the display name (usually first line or before email)
+            String[] lines = fullText.split("\n");
+            String displayName = lines[0].trim();
+            System.out.println("[DEBUG getLoggedInUserDisplayName] Extracted display name: " + displayName);
+            
+            return displayName;
+        } catch (Exception e) {
+            System.out.println("[DEBUG getLoggedInUserDisplayName] Error: " + e.getMessage());
+            return null;
+        }
+    }
 }

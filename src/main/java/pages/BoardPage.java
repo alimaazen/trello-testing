@@ -313,29 +313,45 @@ public class BoardPage {
         searchInput.sendKeys(email);
 
         // Brief pause to let typeahead populate
-        try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
 
+        // Check what's visible on the page
+        System.out.println("[DEBUG inviteMemberByEmail] Checking for typeahead suggestions...");
+        List<WebElement> allSuggestions = driver.findElements(typeaheadSuggestionLocator);
+        System.out.println("[DEBUG inviteMemberByEmail] Found " + allSuggestions.size() + " typeahead suggestions");
+        
         boolean suggestionClicked = false;
         try {
             WebElement suggestion = new WebDriverWait(driver, Duration.ofSeconds(5))
                     .until(ExpectedConditions.elementToBeClickable(typeaheadSuggestionLocator));
             System.out.println("[DEBUG inviteMemberByEmail] Typeahead suggestion found, clicking it");
+            System.out.println("[DEBUG inviteMemberByEmail] Suggestion text: " + suggestion.getText());
             suggestion.click();
             suggestionClicked = true;
         } catch (Exception e) {
             System.out.println("[DEBUG inviteMemberByEmail] No typeahead suggestion - will send external invite");
+            System.out.println("[DEBUG inviteMemberByEmail] Exception: " + e.getMessage());
             // No typeahead suggestion - fall through and let the Share button send an
             // external invite for the typed email.
         }
 
-        WebElement sendInviteButton =
-                wait.until(ExpectedConditions.elementToBeClickable(sendInviteButtonLocator));
-        System.out.println("[DEBUG inviteMemberByEmail] Clicking send/share invite button");
-        sendInviteButton.click();
+        // Check if the send button is even visible/enabled
+        try {
+            WebElement sendInviteButton =
+                    wait.until(ExpectedConditions.elementToBeClickable(sendInviteButtonLocator));
+            System.out.println("[DEBUG inviteMemberByEmail] Send button found: " + sendInviteButton.getText());
+            System.out.println("[DEBUG inviteMemberByEmail] Send button enabled: " + sendInviteButton.isEnabled());
+            sendInviteButton.click();
+            System.out.println("[DEBUG inviteMemberByEmail] Send button clicked");
+        } catch (Exception e) {
+            System.out.println("[DEBUG inviteMemberByEmail] ERROR: Could not find/click send button");
+            System.out.println("[DEBUG inviteMemberByEmail] Exception: " + e.getMessage());
+            throw e;
+        }
         
         // Wait for the invite to process and member row to appear
         System.out.println("[DEBUG inviteMemberByEmail] Waiting for member to appear in list...");
-        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
         System.out.println("[DEBUG inviteMemberByEmail] Invite process complete");
     }
 
@@ -351,20 +367,40 @@ public class BoardPage {
             // Wait up to 10 seconds for the member to appear in the list
             return wait.until(driver -> {
                 List<WebElement> members = driver.findElements(memberItemLocator);
-                System.out.println("[DEBUG] Checking for member: '" + emailOrName + "'");
-                System.out.println("[DEBUG] Found " + members.size() + " member items in the list");
-                for (WebElement member : members) {
+                System.out.println("[DEBUG isMemberOnBoard] Checking for member: '" + emailOrName + "'");
+                System.out.println("[DEBUG isMemberOnBoard] Found " + members.size() + " member items in the list");
+                
+                if (members.isEmpty()) {
+                    System.out.println("[DEBUG isMemberOnBoard] WARNING: No member items found! Checking if Share dialog is still open...");
+                    List<WebElement> shareInputs = driver.findElements(shareSearchInputLocator);
+                    System.out.println("[DEBUG isMemberOnBoard] Share search input visible: " + !shareInputs.isEmpty());
+                }
+                
+                for (int i = 0; i < members.size(); i++) {
+                    WebElement member = members.get(i);
                     String memberText = member.getText();
-                    System.out.println("[DEBUG] Member text: '" + memberText + "'");
+                    System.out.println("[DEBUG isMemberOnBoard] Member[" + i + "] text: '" + memberText + "'");
+                    
+                    // Try both exact match and contains
                     if (memberText.contains(emailOrName)) {
-                        System.out.println("[DEBUG] MATCH FOUND!");
+                        System.out.println("[DEBUG isMemberOnBoard] MATCH FOUND (contains)!");
+                        return true;
+                    }
+                    if (memberText.toLowerCase().contains(emailOrName.toLowerCase())) {
+                        System.out.println("[DEBUG isMemberOnBoard] MATCH FOUND (case-insensitive)!");
                         return true;
                     }
                 }
+                System.out.println("[DEBUG isMemberOnBoard] No match yet, will retry...");
                 return false;
             });
         } catch (Exception e) {
-            System.out.println("[DEBUG] Exception in isMemberOnBoard: " + e.getMessage());
+            System.out.println("[DEBUG isMemberOnBoard] Exception: " + e.getMessage());
+            System.out.println("[DEBUG isMemberOnBoard] Final check - dumping all elements with data-testid='member-item':");
+            List<WebElement> finalCheck = driver.findElements(memberItemLocator);
+            for (int i = 0; i < finalCheck.size(); i++) {
+                System.out.println("[DEBUG isMemberOnBoard] Final[" + i + "]: " + finalCheck.get(i).getText());
+            }
             return false;
         }
     }
@@ -403,19 +439,44 @@ public class BoardPage {
     private WebElement findMemberRow(String emailOrName) {
         List<WebElement> members = driver.findElements(memberItemLocator);
         System.out.println("[DEBUG findMemberRow] Looking for: '" + emailOrName + "'");
+        System.out.println("[DEBUG findMemberRow] Locator used: " + memberItemLocator);
         System.out.println("[DEBUG findMemberRow] Found " + members.size() + " member items");
         
-        for (WebElement member : members) {
+        if (members.isEmpty()) {
+            System.out.println("[DEBUG findMemberRow] ERROR: No member items found at all!");
+            System.out.println("[DEBUG findMemberRow] Checking if Share dialog is open...");
+            
+            // Try to find ANY elements in the Share dialog
+            try {
+                WebElement shareDialog = driver.findElement(By.cssSelector("[role='dialog']"));
+                System.out.println("[DEBUG findMemberRow] Dialog found, HTML snippet:");
+                System.out.println(shareDialog.getAttribute("outerHTML").substring(0, Math.min(500, shareDialog.getAttribute("outerHTML").length())));
+            } catch (Exception e) {
+                System.out.println("[DEBUG findMemberRow] No dialog found: " + e.getMessage());
+            }
+        }
+        
+        for (int i = 0; i < members.size(); i++) {
+            WebElement member = members.get(i);
             String memberText = member.getText();
-            System.out.println("[DEBUG findMemberRow] Member text: '" + memberText + "'");
+            String memberHtml = member.getAttribute("outerHTML");
+            System.out.println("[DEBUG findMemberRow] Member[" + i + "] text: '" + memberText + "'");
+            System.out.println("[DEBUG findMemberRow] Member[" + i + "] HTML: " + memberHtml.substring(0, Math.min(200, memberHtml.length())));
+            
             if (memberText.contains(emailOrName)) {
                 System.out.println("[DEBUG findMemberRow] MATCH FOUND!");
+                return member;
+            }
+            // Also try case-insensitive
+            if (memberText.toLowerCase().contains(emailOrName.toLowerCase())) {
+                System.out.println("[DEBUG findMemberRow] MATCH FOUND (case-insensitive)!");
                 return member;
             }
         }
         
         System.out.println("[DEBUG findMemberRow] NO MATCH - Member '" + emailOrName + "' not found in list");
-        throw new IllegalStateException("No board member found matching: " + emailOrName);
+        throw new IllegalStateException("No board member found matching: " + emailOrName + 
+            ". Found " + members.size() + " members total. Check debug output above for member names.");
     }
 
     /**

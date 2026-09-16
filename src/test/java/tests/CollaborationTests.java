@@ -19,16 +19,34 @@ import utils.BaseTest;
  */
 public class CollaborationTests extends BaseTest {
 
+    private String _cachedSecondAccountName = null;
+
     private String secondAccountEmail() {
         return config.getProperty("trello.email.second");
     }
 
     /**
      * Display name shown for the second account in board member lists, card avatars,
-     * and mention popovers. Trello usernames aren't derived from email local-parts, so
-     * this (not the email) is what all member-matching lookups must search for.
+     * and mention popovers. Dynamically retrieved from the logged-in second account.
+     *
+     * @return Display name of the second account
      */
     private String secondAccountName() {
+        if (_cachedSecondAccountName != null) {
+            return _cachedSecondAccountName;
+        }
+        
+        // Get the display name from the logged-in second account
+        if (secondDashboardPage != null) {
+            _cachedSecondAccountName = secondDashboardPage.getLoggedInUserDisplayName();
+            if (_cachedSecondAccountName != null) {
+                System.out.println("[CollaborationTests] Second account display name: " + _cachedSecondAccountName);
+                return _cachedSecondAccountName;
+            }
+        }
+        
+        // Fallback to hardcoded value if dynamic retrieval fails
+        System.out.println("[CollaborationTests] WARNING: Could not retrieve second account name dynamically, using fallback");
         return "Rashmi";
     }
     
@@ -63,6 +81,10 @@ public class CollaborationTests extends BaseTest {
     public void testInviteMemberToBoard() {
         DashboardPage dashboard = performLogin();
         performSecondLogin();
+        
+        // Get and cache the second account's display name
+        String secondName = secondAccountName();
+        System.out.println("[testInviteMemberToBoard] Using second account name: " + secondName);
 
         String boardName = "Collab-Invite";
         BoardPage board = ensureBoardExists(dashboard, boardName);
@@ -70,8 +92,8 @@ public class CollaborationTests extends BaseTest {
         board.openShareDialog();
         board.inviteMemberByEmail(secondAccountEmail());
 
-        Assert.assertTrue(board.isMemberOnBoard(secondAccountName()),
-                "Invited member should appear in the board's member list");
+        Assert.assertTrue(board.isMemberOnBoard(secondName),
+                "Invited member '" + secondName + "' should appear in the board's member list");
 
         secondDriver.get(config.getProperty("trello.url"));
         Assert.assertTrue(secondDashboardPage.isBoardVisible(boardName),
@@ -98,6 +120,11 @@ public class CollaborationTests extends BaseTest {
         // Verify member was actually added before trying to change role
         Assert.assertTrue(board.isMemberOnBoard(secondNameAdmin),
                 "Invited member should appear in the board's member list before setting role");
+        
+        // Close and re-open Share dialog to refresh the member list
+        board.closeDialog();
+        try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        board.openShareDialog();
         
         board.setMemberRole(secondNameAdmin, "Admin");
 
@@ -130,6 +157,12 @@ public class CollaborationTests extends BaseTest {
 
         board.openShareDialog();
         board.inviteMemberByEmail(secondAccountEmail());
+        
+        // Close and re-open Share dialog to refresh the member list
+        board.closeDialog();
+        try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        board.openShareDialog();
+        
         board.setMemberRole(secondNameObserver, "Observer");
 
         Assert.assertEquals(board.getMemberRole(secondNameObserver), "Observer",
