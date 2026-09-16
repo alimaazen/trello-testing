@@ -284,11 +284,27 @@ public class BoardPage {
 
     /**
      * Open the board's Share dialog.
+     * Retries if element becomes stale (page refresh/reload).
      */
     public void openShareDialog() {
-        WebElement shareButton = wait.until(ExpectedConditions.elementToBeClickable(shareButtonLocator));
-        shareButton.click();
-        wait.until(ExpectedConditions.visibilityOfElementLocated(shareSearchInputLocator));
+        int attempts = 0;
+        int maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            try {
+                WebElement shareButton = wait.until(ExpectedConditions.elementToBeClickable(shareButtonLocator));
+                shareButton.click();
+                wait.until(ExpectedConditions.visibilityOfElementLocated(shareSearchInputLocator));
+                return; // Success
+            } catch (org.openqa.selenium.StaleElementReferenceException e) {
+                attempts++;
+                System.out.println("[DEBUG openShareDialog] Stale element, retry " + attempts + "/" + maxAttempts);
+                if (attempts >= maxAttempts) {
+                    throw e;
+                }
+                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+            }
+        }
     }
 
     /**
