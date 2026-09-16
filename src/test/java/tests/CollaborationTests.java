@@ -94,6 +94,11 @@ public class CollaborationTests extends BaseTest {
 
         board.openShareDialog();
         board.inviteMemberByEmail(secondAccountEmail());
+        
+        // Verify member was actually added before trying to change role
+        Assert.assertTrue(board.isMemberOnBoard(secondNameAdmin),
+                "Invited member should appear in the board's member list before setting role");
+        
         board.setMemberRole(secondNameAdmin, "Admin");
 
         Assert.assertEquals(board.getMemberRole(secondNameAdmin), "Admin",

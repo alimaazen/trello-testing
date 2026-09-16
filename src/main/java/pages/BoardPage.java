@@ -307,22 +307,36 @@ public class BoardPage {
      * @param email Email address of the member to invite
      */
     public void inviteMemberByEmail(String email) {
+        System.out.println("[DEBUG inviteMemberByEmail] Inviting: " + email);
         WebElement searchInput = wait.until(ExpectedConditions.visibilityOfElementLocated(shareSearchInputLocator));
         searchInput.clear();
         searchInput.sendKeys(email);
 
+        // Brief pause to let typeahead populate
+        try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+
+        boolean suggestionClicked = false;
         try {
             WebElement suggestion = new WebDriverWait(driver, Duration.ofSeconds(5))
                     .until(ExpectedConditions.elementToBeClickable(typeaheadSuggestionLocator));
+            System.out.println("[DEBUG inviteMemberByEmail] Typeahead suggestion found, clicking it");
             suggestion.click();
+            suggestionClicked = true;
         } catch (Exception e) {
+            System.out.println("[DEBUG inviteMemberByEmail] No typeahead suggestion - will send external invite");
             // No typeahead suggestion - fall through and let the Share button send an
             // external invite for the typed email.
         }
 
         WebElement sendInviteButton =
                 wait.until(ExpectedConditions.elementToBeClickable(sendInviteButtonLocator));
+        System.out.println("[DEBUG inviteMemberByEmail] Clicking send/share invite button");
         sendInviteButton.click();
+        
+        // Wait for the invite to process and member row to appear
+        System.out.println("[DEBUG inviteMemberByEmail] Waiting for member to appear in list...");
+        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+        System.out.println("[DEBUG inviteMemberByEmail] Invite process complete");
     }
 
     /**
@@ -334,14 +348,23 @@ public class BoardPage {
      */
     public boolean isMemberOnBoard(String emailOrName) {
         try {
-            List<WebElement> members = driver.findElements(memberItemLocator);
-            for (WebElement member : members) {
-                if (member.getText().contains(emailOrName)) {
-                    return true;
+            // Wait up to 10 seconds for the member to appear in the list
+            return wait.until(driver -> {
+                List<WebElement> members = driver.findElements(memberItemLocator);
+                System.out.println("[DEBUG] Checking for member: '" + emailOrName + "'");
+                System.out.println("[DEBUG] Found " + members.size() + " member items in the list");
+                for (WebElement member : members) {
+                    String memberText = member.getText();
+                    System.out.println("[DEBUG] Member text: '" + memberText + "'");
+                    if (memberText.contains(emailOrName)) {
+                        System.out.println("[DEBUG] MATCH FOUND!");
+                        return true;
+                    }
                 }
-            }
-            return false;
+                return false;
+            });
         } catch (Exception e) {
+            System.out.println("[DEBUG] Exception in isMemberOnBoard: " + e.getMessage());
             return false;
         }
     }
@@ -379,11 +402,19 @@ public class BoardPage {
 
     private WebElement findMemberRow(String emailOrName) {
         List<WebElement> members = driver.findElements(memberItemLocator);
+        System.out.println("[DEBUG findMemberRow] Looking for: '" + emailOrName + "'");
+        System.out.println("[DEBUG findMemberRow] Found " + members.size() + " member items");
+        
         for (WebElement member : members) {
-            if (member.getText().contains(emailOrName)) {
+            String memberText = member.getText();
+            System.out.println("[DEBUG findMemberRow] Member text: '" + memberText + "'");
+            if (memberText.contains(emailOrName)) {
+                System.out.println("[DEBUG findMemberRow] MATCH FOUND!");
                 return member;
             }
         }
+        
+        System.out.println("[DEBUG findMemberRow] NO MATCH - Member '" + emailOrName + "' not found in list");
         throw new IllegalStateException("No board member found matching: " + emailOrName);
     }
 
