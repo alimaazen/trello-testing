@@ -337,17 +337,35 @@ public class BoardPage {
 
         // Check if the send button is even visible/enabled
         try {
-            WebElement sendInviteButton =
-                    wait.until(ExpectedConditions.elementToBeClickable(sendInviteButtonLocator));
-            System.out.println("[DEBUG inviteMemberByEmail] Send button found: " + sendInviteButton.getText());
-            System.out.println("[DEBUG inviteMemberByEmail] Send button enabled: " + sendInviteButton.isEnabled());
-            sendInviteButton.click();
-            System.out.println("[DEBUG inviteMemberByEmail] Send button clicked");
+        WebElement sendInviteButton =
+                wait.until(ExpectedConditions.elementToBeClickable(sendInviteButtonLocator));
+        System.out.println("[DEBUG inviteMemberByEmail] Send button found: " + sendInviteButton.getText());
+        System.out.println("[DEBUG inviteMemberByEmail] Send button enabled: " + sendInviteButton.isEnabled());
+        sendInviteButton.click();
+        System.out.println("[DEBUG inviteMemberByEmail] Send button clicked");
+        
+        // Check if there's a billing confirmation dialog (Multi-Board Guest warning)
+        try {
+            Thread.sleep(1000);
+            By confirmButtonLocator = By.xpath("//button[contains(., 'Add to board') or contains(., 'Confirm') or @data-testid='multi-board-guest-confirm-button']");
+            List<WebElement> confirmButtons = driver.findElements(confirmButtonLocator);
+            if (!confirmButtons.isEmpty() && confirmButtons.get(0).isDisplayed()) {
+                System.out.println("[DEBUG inviteMemberByEmail] Multi-board guest confirmation dialog detected, clicking confirm...");
+                confirmButtons.get(0).click();
+                System.out.println("[DEBUG inviteMemberByEmail] Confirmation clicked");
+                Thread.sleep(1000);
+            } else {
+                System.out.println("[DEBUG inviteMemberByEmail] No confirmation dialog detected");
+            }
         } catch (Exception e) {
-            System.out.println("[DEBUG inviteMemberByEmail] ERROR: Could not find/click send button");
-            System.out.println("[DEBUG inviteMemberByEmail] Exception: " + e.getMessage());
-            throw e;
+            System.out.println("[DEBUG inviteMemberByEmail] No confirmation dialog or error checking: " + e.getMessage());
         }
+        
+        // Wait for the invite to process and member row to appear
+        System.out.println("[DEBUG inviteMemberByEmail] Waiting for member to appear in list...");
+        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+        System.out.println("[DEBUG inviteMemberByEmail] Invite process complete");
+    }
         
         // Wait for the invite to process and member row to appear
         System.out.println("[DEBUG inviteMemberByEmail] Waiting for member to appear in list...");
