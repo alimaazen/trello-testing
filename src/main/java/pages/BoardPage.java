@@ -363,16 +363,28 @@ public class BoardPage {
         
         sendInviteButton.click();
         System.out.println("[DEBUG inviteMemberByEmail] Send button clicked");
-        
-        // Wait for the invite to process and member row to appear
-        System.out.println("[DEBUG inviteMemberByEmail] Waiting for member to appear in list...");
-        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
-        System.out.println("[DEBUG inviteMemberByEmail] Invite process complete");
 
+        // Count members before to detect when new member is added
+        int memberCountBefore = driver.findElements(memberItemLocator).size();
+        System.out.println("[DEBUG inviteMemberByEmail] Member count before: " + memberCountBefore);
         
-        // Wait for the invite to process and member row to appear
-        System.out.println("[DEBUG inviteMemberByEmail] Waiting for member to appear in list...");
-        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+        // Wait for member count to increase (billing processing can take 5-10 seconds)
+        System.out.println("[DEBUG inviteMemberByEmail] Waiting for member count to increase...");
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(15)).until(d -> {
+                int currentCount = d.findElements(memberItemLocator).size();
+                if (currentCount != memberCountBefore) {
+                    System.out.println("[DEBUG inviteMemberByEmail] Member count changed: " + memberCountBefore + " -> " + currentCount);
+                }
+                return currentCount > memberCountBefore;
+            });
+            System.out.println("[DEBUG inviteMemberByEmail] ✓ Member added successfully!");
+        } catch (Exception e) {
+            System.out.println("[DEBUG inviteMemberByEmail] ✗ Timeout: Member count did not increase after 15s");
+        }
+        
+        // Let UI stabilize
+        try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
         System.out.println("[DEBUG inviteMemberByEmail] Invite process complete");
     }
 
