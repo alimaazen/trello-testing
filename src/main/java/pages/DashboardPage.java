@@ -266,25 +266,19 @@ public class DashboardPage {
             avatar.click();
             
             // Wait for menu to appear and get the account name
-            // The name is typically in a button or div with the user's name
             WebElement accountInfo = wait.until(ExpectedConditions.visibilityOfElementLocated(
                     By.cssSelector("[data-testid='account-menu-account-button'], [data-testid='header-member-menu-name']")
             ));
             
             String fullText = accountInfo.getText();
-            System.out.println("[DEBUG getLoggedInUserDisplayName] Account info text: " + fullText);
             
             // Close the menu by clicking avatar again
             avatar.click();
             
             // Parse the display name (usually first line or before email)
             String[] lines = fullText.split("\n");
-            String displayName = lines[0].trim();
-            System.out.println("[DEBUG getLoggedInUserDisplayName] Extracted display name: " + displayName);
-            
-            return displayName;
+            return lines[0].trim();
         } catch (Exception e) {
-            System.out.println("[DEBUG getLoggedInUserDisplayName] Error: " + e.getMessage());
             return null;
         }
     }

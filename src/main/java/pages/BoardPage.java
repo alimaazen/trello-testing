@@ -298,7 +298,6 @@ public class BoardPage {
                 return; // Success
             } catch (org.openqa.selenium.StaleElementReferenceException e) {
                 attempts++;
-                System.out.println("[DEBUG openShareDialog] Stale element, retry " + attempts + "/" + maxAttempts);
                 if (attempts >= maxAttempts) {
                     throw e;
                 }
@@ -323,7 +322,6 @@ public class BoardPage {
      * @param email Email address of the member to invite
      */
     public void inviteMemberByEmail(String email) {
-        System.out.println("[DEBUG inviteMemberByEmail] Inviting: " + email);
         WebElement searchInput = wait.until(ExpectedConditions.visibilityOfElementLocated(shareSearchInputLocator));
         searchInput.clear();
         searchInput.sendKeys(email);
@@ -331,84 +329,45 @@ public class BoardPage {
         // Brief pause to let typeahead populate
         try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
 
-        // Check what's visible on the page
-        System.out.println("[DEBUG inviteMemberByEmail] Checking for typeahead suggestions...");
-        List<WebElement> allSuggestions = driver.findElements(typeaheadSuggestionLocator);
-        System.out.println("[DEBUG inviteMemberByEmail] Found " + allSuggestions.size() + " typeahead suggestions");
-        
         boolean suggestionClicked = false;
         try {
             WebElement suggestion = new WebDriverWait(driver, Duration.ofSeconds(5))
                     .until(ExpectedConditions.elementToBeClickable(typeaheadSuggestionLocator));
-            System.out.println("[DEBUG inviteMemberByEmail] Typeahead suggestion found, clicking it");
-            System.out.println("[DEBUG inviteMemberByEmail] Suggestion text: " + suggestion.getText());
             suggestion.click();
             suggestionClicked = true;
             
-            // After clicking suggestion, member should be added to pending list
-            // Wait for the member to appear in the invite field or member preview
-            System.out.println("[DEBUG inviteMemberByEmail] Waiting after suggestion click for member to be staged...");
+            // Wait for member to be staged after clicking suggestion
             Thread.sleep(2000);
             
-            // Check if the Share button is still visible (dialog didn't auto-close)
+            // Check if Share button still visible (dialog didn't auto-close)
             List<WebElement> shareButtons = driver.findElements(sendInviteButtonLocator);
             if (shareButtons.isEmpty() || !shareButtons.get(0).isDisplayed()) {
-                System.out.println("[DEBUG inviteMemberByEmail] WARNING: Share button disappeared after clicking suggestion!");
-                System.out.println("[DEBUG inviteMemberByEmail] Dialog may have auto-closed. Member might already be added.");
-                // If button gone, member was added immediately, just return
+                // Member was added immediately, dialog auto-closed
                 try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
-                System.out.println("[DEBUG inviteMemberByEmail] Invite process complete (auto-added)");
                 return;
             }
             
         } catch (Exception e) {
-            System.out.println("[DEBUG inviteMemberByEmail] No typeahead suggestion - will send external invite");
-            System.out.println("[DEBUG inviteMemberByEmail] Exception: " + e.getMessage());
-            // No typeahead suggestion - fall through and let the Share button send an
-            // external invite for the typed email.
+            // No typeahead suggestion - will send external invite
         }
 
         WebElement sendInviteButton =
                 wait.until(ExpectedConditions.elementToBeClickable(sendInviteButtonLocator));
-        System.out.println("[DEBUG inviteMemberByEmail] Send button found: " + sendInviteButton.getText());
-        System.out.println("[DEBUG inviteMemberByEmail] Send button enabled: " + sendInviteButton.isEnabled());
-        
-        // Check if the button text changed to indicate member will be added vs invited
-        String buttonText = sendInviteButton.getText();
-        System.out.println("[DEBUG inviteMemberByEmail] Button text after suggestion click: '" + buttonText + "'");
-        
         sendInviteButton.click();
-        System.out.println("[DEBUG inviteMemberByEmail] Send button clicked");
 
-        // Count members before to detect when new member is added
+        // Wait dynamically for member count to increase (handles billing processing delay)
         int memberCountBefore = driver.findElements(memberItemLocator).size();
-        System.out.println("[DEBUG inviteMemberByEmail] Member count before: " + memberCountBefore);
-        
-        // Wait for member count to increase (billing processing can take 5-10 seconds)
-        // If member already exists, this will timeout but that's OK
-        System.out.println("[DEBUG inviteMemberByEmail] Waiting for member count to increase...");
         try {
             new WebDriverWait(driver, Duration.ofSeconds(5)).until(d -> {
                 int currentCount = d.findElements(memberItemLocator).size();
-                if (currentCount != memberCountBefore) {
-                    System.out.println("[DEBUG inviteMemberByEmail] Member count changed: " + memberCountBefore + " -> " + currentCount);
-                }
                 return currentCount > memberCountBefore;
             });
-            System.out.println("[DEBUG inviteMemberByEmail] ✓ Member added successfully!");
         } catch (Exception e) {
             // Timeout is OK - member might already be on board
-            int finalCount = driver.findElements(memberItemLocator).size();
-            if (finalCount == memberCountBefore) {
-                System.out.println("[DEBUG inviteMemberByEmail] ℹ Member count unchanged (member may already be on board)");
-            } else {
-                System.out.println("[DEBUG inviteMemberByEmail] ✗ Unexpected timeout after count change");
-            }
         }
         
         // Let UI stabilize
         try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
-        System.out.println("[DEBUG inviteMemberByEmail] Invite process complete");
     }
 
     /**
@@ -423,40 +382,17 @@ public class BoardPage {
             // Wait up to 10 seconds for the member to appear in the list
             return wait.until(driver -> {
                 List<WebElement> members = driver.findElements(memberItemLocator);
-                System.out.println("[DEBUG isMemberOnBoard] Checking for member: '" + emailOrName + "'");
-                System.out.println("[DEBUG isMemberOnBoard] Found " + members.size() + " member items in the list");
                 
-                if (members.isEmpty()) {
-                    System.out.println("[DEBUG isMemberOnBoard] WARNING: No member items found! Checking if Share dialog is still open...");
-                    List<WebElement> shareInputs = driver.findElements(shareSearchInputLocator);
-                    System.out.println("[DEBUG isMemberOnBoard] Share search input visible: " + !shareInputs.isEmpty());
-                }
-                
-                for (int i = 0; i < members.size(); i++) {
-                    WebElement member = members.get(i);
+                for (WebElement member : members) {
                     String memberText = member.getText();
-                    System.out.println("[DEBUG isMemberOnBoard] Member[" + i + "] text: '" + memberText + "'");
-                    
-                    // Try both exact match and contains
-                    if (memberText.contains(emailOrName)) {
-                        System.out.println("[DEBUG isMemberOnBoard] MATCH FOUND (contains)!");
-                        return true;
-                    }
+                    // Try case-insensitive match
                     if (memberText.toLowerCase().contains(emailOrName.toLowerCase())) {
-                        System.out.println("[DEBUG isMemberOnBoard] MATCH FOUND (case-insensitive)!");
                         return true;
                     }
                 }
-                System.out.println("[DEBUG isMemberOnBoard] No match yet, will retry...");
                 return false;
             });
         } catch (Exception e) {
-            System.out.println("[DEBUG isMemberOnBoard] Exception: " + e.getMessage());
-            System.out.println("[DEBUG isMemberOnBoard] Final check - dumping all elements with data-testid='member-item':");
-            List<WebElement> finalCheck = driver.findElements(memberItemLocator);
-            for (int i = 0; i < finalCheck.size(); i++) {
-                System.out.println("[DEBUG isMemberOnBoard] Final[" + i + "]: " + finalCheck.get(i).getText());
-            }
             return false;
         }
     }
@@ -494,45 +430,16 @@ public class BoardPage {
 
     private WebElement findMemberRow(String emailOrName) {
         List<WebElement> members = driver.findElements(memberItemLocator);
-        System.out.println("[DEBUG findMemberRow] Looking for: '" + emailOrName + "'");
-        System.out.println("[DEBUG findMemberRow] Locator used: " + memberItemLocator);
-        System.out.println("[DEBUG findMemberRow] Found " + members.size() + " member items");
         
-        if (members.isEmpty()) {
-            System.out.println("[DEBUG findMemberRow] ERROR: No member items found at all!");
-            System.out.println("[DEBUG findMemberRow] Checking if Share dialog is open...");
-            
-            // Try to find ANY elements in the Share dialog
-            try {
-                WebElement shareDialog = driver.findElement(By.cssSelector("[role='dialog']"));
-                System.out.println("[DEBUG findMemberRow] Dialog found, HTML snippet:");
-                System.out.println(shareDialog.getAttribute("outerHTML").substring(0, Math.min(500, shareDialog.getAttribute("outerHTML").length())));
-            } catch (Exception e) {
-                System.out.println("[DEBUG findMemberRow] No dialog found: " + e.getMessage());
-            }
-        }
-        
-        for (int i = 0; i < members.size(); i++) {
-            WebElement member = members.get(i);
+        for (WebElement member : members) {
             String memberText = member.getText();
-            String memberHtml = member.getAttribute("outerHTML");
-            System.out.println("[DEBUG findMemberRow] Member[" + i + "] text: '" + memberText + "'");
-            System.out.println("[DEBUG findMemberRow] Member[" + i + "] HTML: " + memberHtml.substring(0, Math.min(200, memberHtml.length())));
-            
-            if (memberText.contains(emailOrName)) {
-                System.out.println("[DEBUG findMemberRow] MATCH FOUND!");
-                return member;
-            }
-            // Also try case-insensitive
+            // Try case-insensitive match
             if (memberText.toLowerCase().contains(emailOrName.toLowerCase())) {
-                System.out.println("[DEBUG findMemberRow] MATCH FOUND (case-insensitive)!");
                 return member;
             }
         }
         
-        System.out.println("[DEBUG findMemberRow] NO MATCH - Member '" + emailOrName + "' not found in list");
-        throw new IllegalStateException("No board member found matching: " + emailOrName + 
-            ". Found " + members.size() + " members total. Check debug output above for member names.");
+        throw new IllegalStateException("No board member found matching: " + emailOrName);
     }
 
     /**

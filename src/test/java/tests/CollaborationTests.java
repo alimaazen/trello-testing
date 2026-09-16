@@ -40,13 +40,11 @@ public class CollaborationTests extends BaseTest {
         if (secondDashboardPage != null) {
             _cachedSecondAccountName = secondDashboardPage.getLoggedInUserDisplayName();
             if (_cachedSecondAccountName != null) {
-                System.out.println("[CollaborationTests] Second account display name: " + _cachedSecondAccountName);
                 return _cachedSecondAccountName;
             }
         }
         
         // Fallback to hardcoded value if dynamic retrieval fails
-        System.out.println("[CollaborationTests] WARNING: Could not retrieve second account name dynamically, using fallback");
         return "Rashmi";
     }
     
@@ -82,10 +80,7 @@ public class CollaborationTests extends BaseTest {
         DashboardPage dashboard = performLogin();
         performSecondLogin();
         
-        // Get and cache the second account's display name
         String secondName = secondAccountName();
-        System.out.println("[testInviteMemberToBoard] Using second account name: " + secondName);
-
         String boardName = "Collab-Invite";
         BoardPage board = ensureBoardExists(dashboard, boardName);
 

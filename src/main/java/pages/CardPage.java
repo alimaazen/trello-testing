@@ -170,40 +170,18 @@ public class CardPage {
         }
 
         WebElement searchInput = wait.until(ExpectedConditions.visibilityOfElementLocated(memberSearchInputLocator));
-        System.out.println("[DEBUG addMember] Typing search: " + emailOrUsernameFragment);
         searchInput.sendKeys(emailOrUsernameFragment);
         
         // Wait for search results
         try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
 
-        System.out.println("[DEBUG addMember] Looking for member in search results...");
         WebElement memberButton = wait.until(ExpectedConditions.elementToBeClickable(memberSearchResultLocator));
-        System.out.println("[DEBUG addMember] Member found in results, clicking...");
         memberButton.click();
 
-        System.out.println("[DEBUG addMember] Closing member menu...");
         new Actions(driver).sendKeys(Keys.ESCAPE).perform();
         
-        System.out.println("[DEBUG addMember] Waiting for member to be assigned...");
-        try {
-            new WebDriverWait(driver, Duration.ofSeconds(30))
-                    .until(d -> {
-                        boolean assigned = isMemberAssigned(emailOrUsernameFragment);
-                        System.out.println("[DEBUG addMember] Is member assigned? " + assigned);
-                        return assigned;
-                    });
-            System.out.println("[DEBUG addMember] ✓ Member assigned successfully!");
-        } catch (Exception e) {
-            System.out.println("[DEBUG addMember] ✗ Timeout waiting for member assignment");
-            // Log what avatars we DO see
-            List<WebElement> avatars = driver.findElements(assignedMemberAvatarLocator);
-            System.out.println("[DEBUG addMember] Found " + avatars.size() + " assigned member avatars");
-            for (int i = 0; i < avatars.size(); i++) {
-                String title = avatars.get(i).getAttribute("title");
-                System.out.println("[DEBUG addMember] Avatar[" + i + "] title: " + title);
-            }
-            throw e;
-        }
+        new WebDriverWait(driver, Duration.ofSeconds(30))
+                .until(d -> isMemberAssigned(emailOrUsernameFragment));
     }
 
     /**
