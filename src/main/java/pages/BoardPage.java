@@ -335,8 +335,6 @@ public class BoardPage {
             // external invite for the typed email.
         }
 
-        // Check if the send button is even visible/enabled
-        try {
         WebElement sendInviteButton =
                 wait.until(ExpectedConditions.elementToBeClickable(sendInviteButtonLocator));
         System.out.println("[DEBUG inviteMemberByEmail] Send button found: " + sendInviteButton.getText());
