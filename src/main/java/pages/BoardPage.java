@@ -328,6 +328,23 @@ public class BoardPage {
             System.out.println("[DEBUG inviteMemberByEmail] Suggestion text: " + suggestion.getText());
             suggestion.click();
             suggestionClicked = true;
+            
+            // After clicking suggestion, member should be added to pending list
+            // Wait for the member to appear in the invite field or member preview
+            System.out.println("[DEBUG inviteMemberByEmail] Waiting after suggestion click for member to be staged...");
+            Thread.sleep(2000);
+            
+            // Check if the Share button is still visible (dialog didn't auto-close)
+            List<WebElement> shareButtons = driver.findElements(sendInviteButtonLocator);
+            if (shareButtons.isEmpty() || !shareButtons.get(0).isDisplayed()) {
+                System.out.println("[DEBUG inviteMemberByEmail] WARNING: Share button disappeared after clicking suggestion!");
+                System.out.println("[DEBUG inviteMemberByEmail] Dialog may have auto-closed. Member might already be added.");
+                // If button gone, member was added immediately, just return
+                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                System.out.println("[DEBUG inviteMemberByEmail] Invite process complete (auto-added)");
+                return;
+            }
+            
         } catch (Exception e) {
             System.out.println("[DEBUG inviteMemberByEmail] No typeahead suggestion - will send external invite");
             System.out.println("[DEBUG inviteMemberByEmail] Exception: " + e.getMessage());
@@ -339,71 +356,19 @@ public class BoardPage {
                 wait.until(ExpectedConditions.elementToBeClickable(sendInviteButtonLocator));
         System.out.println("[DEBUG inviteMemberByEmail] Send button found: " + sendInviteButton.getText());
         System.out.println("[DEBUG inviteMemberByEmail] Send button enabled: " + sendInviteButton.isEnabled());
+        
+        // Check if the button text changed to indicate member will be added vs invited
+        String buttonText = sendInviteButton.getText();
+        System.out.println("[DEBUG inviteMemberByEmail] Button text after suggestion click: '" + buttonText + "'");
+        
         sendInviteButton.click();
         System.out.println("[DEBUG inviteMemberByEmail] Send button clicked");
-        
-        // Check if there's a billing confirmation dialog (Multi-Board Guest warning)
-        try {
-            Thread.sleep(1500);
-            
-            // Look for ALL buttons on the page to see what's available
-            List<WebElement> allButtons = driver.findElements(By.tagName("button"));
-            System.out.println("[DEBUG inviteMemberByEmail] Total buttons visible: " + allButtons.size());
-            
-            // Log visible button texts
-            for (int i = 0; i < Math.min(allButtons.size(), 20); i++) {
-                try {
-                    WebElement btn = allButtons.get(i);
-                    if (btn.isDisplayed()) {
-                        String btnText = btn.getText();
-                        String btnTestId = btn.getAttribute("data-testid");
-                        if (!btnText.isEmpty() || btnTestId != null) {
-                            System.out.println("[DEBUG inviteMemberByEmail] Button[" + i + "]: text='" + btnText + "', testid='" + btnTestId + "'");
-                        }
-                    }
-                } catch (Exception ignored) {}
-            }
-            
-            // Try multiple locator strategies for confirmation button
-            By[] confirmLocators = {
-                By.xpath("//button[contains(text(), 'Add to board')]"),
-                By.xpath("//button[contains(text(), 'Confirm')]"),
-                By.xpath("//button[contains(., 'Add to board')]"),
-                By.cssSelector("button[data-testid*='confirm']"),
-                By.cssSelector("button[data-testid*='multi-board']"),
-                By.xpath("//button[@type='submit' and contains(@class, 'Button')]")
-            };
-            
-            boolean found = false;
-            for (By locator : confirmLocators) {
-                List<WebElement> buttons = driver.findElements(locator);
-                if (!buttons.isEmpty()) {
-                    WebElement confirmBtn = buttons.get(0);
-                    if (confirmBtn.isDisplayed()) {
-                        System.out.println("[DEBUG inviteMemberByEmail] Found confirmation button with locator: " + locator);
-                        System.out.println("[DEBUG inviteMemberByEmail] Button text: '" + confirmBtn.getText() + "'");
-                        confirmBtn.click();
-                        System.out.println("[DEBUG inviteMemberByEmail] Confirmation button clicked");
-                        Thread.sleep(1500);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            
-            if (!found) {
-                System.out.println("[DEBUG inviteMemberByEmail] No confirmation dialog button found with any locator");
-            }
-        } catch (Exception e) {
-            System.out.println("[DEBUG inviteMemberByEmail] Error checking for confirmation: " + e.getMessage());
-            e.printStackTrace();
-        }
         
         // Wait for the invite to process and member row to appear
         System.out.println("[DEBUG inviteMemberByEmail] Waiting for member to appear in list...");
         try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
         System.out.println("[DEBUG inviteMemberByEmail] Invite process complete");
-    }
+
         
         // Wait for the invite to process and member row to appear
         System.out.println("[DEBUG inviteMemberByEmail] Waiting for member to appear in list...");
