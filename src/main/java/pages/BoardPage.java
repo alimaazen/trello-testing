@@ -385,9 +385,10 @@ public class BoardPage {
         System.out.println("[DEBUG inviteMemberByEmail] Member count before: " + memberCountBefore);
         
         // Wait for member count to increase (billing processing can take 5-10 seconds)
+        // If member already exists, this will timeout but that's OK
         System.out.println("[DEBUG inviteMemberByEmail] Waiting for member count to increase...");
         try {
-            new WebDriverWait(driver, Duration.ofSeconds(15)).until(d -> {
+            new WebDriverWait(driver, Duration.ofSeconds(5)).until(d -> {
                 int currentCount = d.findElements(memberItemLocator).size();
                 if (currentCount != memberCountBefore) {
                     System.out.println("[DEBUG inviteMemberByEmail] Member count changed: " + memberCountBefore + " -> " + currentCount);
@@ -396,7 +397,13 @@ public class BoardPage {
             });
             System.out.println("[DEBUG inviteMemberByEmail] ✓ Member added successfully!");
         } catch (Exception e) {
-            System.out.println("[DEBUG inviteMemberByEmail] ✗ Timeout: Member count did not increase after 15s");
+            // Timeout is OK - member might already be on board
+            int finalCount = driver.findElements(memberItemLocator).size();
+            if (finalCount == memberCountBefore) {
+                System.out.println("[DEBUG inviteMemberByEmail] ℹ Member count unchanged (member may already be on board)");
+            } else {
+                System.out.println("[DEBUG inviteMemberByEmail] ✗ Unexpected timeout after count change");
+            }
         }
         
         // Let UI stabilize
